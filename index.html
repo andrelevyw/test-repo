@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soletra - Jogo de Palavras</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 SOLETRA</h1>
+            <p class="subtitle">Forme palavras com as letras disponíveis</p>
+        </header>
+
+        <div class="game-info">
+            <div class="info-item">
+                <span class="label">Pontuação</span>
+                <span class="value" id="score">0</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Palavras</span>
+                <span class="value" id="word-count">0</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Nível</span>
+                <span class="value" id="level">1</span>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div class="letter-circle">
+                <div class="center-letter" id="center-letter">A</div>
+                <div class="outer-letters" id="outer-letters">
+                    <!-- Letras serão inseridas dinamicamente -->
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input
+                    type="text"
+                    id="word-input"
+                    placeholder="Digite sua palavra aqui..."
+                    autocomplete="off"
+                    maxlength="15"
+                >
+                <div class="buttons">
+                    <button id="submit-btn" class="btn btn-primary">Enviar</button>
+                    <button id="shuffle-btn" class="btn btn-secondary">🔄 Embaralhar</button>
+                    <button id="clear-btn" class="btn btn-secondary">Limpar</button>
+                </div>
+            </div>
+
+            <div class="message" id="message"></div>
+        </div>
+
+        <div class="words-section">
+            <h3>Palavras Encontradas (<span id="found-count">0</span>)</h3>
+            <div class="words-grid" id="words-found">
+                <p class="no-words">Nenhuma palavra encontrada ainda</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="hint-btn" class="btn btn-hint">💡 Dica (50 pts)</button>
+            <button id="new-game-btn" class="btn btn-new">🎮 Novo Jogo</button>
+        </div>
+
+        <div class="rules">
+            <h4>📋 Regras do Jogo</h4>
+            <ul>
+                <li>Forme palavras usando as letras disponíveis</li>
+                <li>A letra central (amarela) DEVE estar em todas as palavras</li>
+                <li>Palavras devem ter no mínimo 4 letras</li>
+                <li>Cada letra pode ser usada várias vezes</li>
+                <li>Palavras maiores valem mais pontos!</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

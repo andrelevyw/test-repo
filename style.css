@@ -1,0 +1,364 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+h1 {
+    color: #667eea;
+    font-size: 3em;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.subtitle {
+    color: #666;
+    font-size: 1.1em;
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 30px;
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.info-item {
+    text-align: center;
+}
+
+.info-item .label {
+    display: block;
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+.info-item .value {
+    display: block;
+    color: #667eea;
+    font-size: 2em;
+    font-weight: bold;
+}
+
+.game-area {
+    margin-bottom: 30px;
+}
+
+.letter-circle {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin: 0 auto 30px;
+}
+
+.center-letter {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #333;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+    cursor: pointer;
+    transition: transform 0.2s;
+    z-index: 10;
+}
+
+.center-letter:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.outer-letters {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.outer-letter {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.outer-letter:hover {
+    transform: scale(1.1);
+}
+
+.input-area {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#word-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 15px 20px;
+    font-size: 1.3em;
+    border: 3px solid #667eea;
+    border-radius: 10px;
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+#word-input:focus {
+    border-color: #764ba2;
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 12px 24px;
+    font-size: 1em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #f8f9fa;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+
+.btn-secondary:hover {
+    background: #667eea;
+    color: white;
+}
+
+.btn-hint {
+    background: #ffc107;
+    color: #333;
+}
+
+.btn-hint:hover {
+    background: #ffb300;
+    transform: translateY(-2px);
+}
+
+.btn-new {
+    background: #28a745;
+    color: white;
+}
+
+.btn-new:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+.message {
+    text-align: center;
+    min-height: 30px;
+    margin: 15px 0;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.message.success {
+    color: #28a745;
+    animation: slideIn 0.3s ease-out;
+}
+
+.message.error {
+    color: #dc3545;
+    animation: shake 0.5s ease-out;
+}
+
+.message.info {
+    color: #17a2b8;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+.words-section {
+    margin-bottom: 30px;
+}
+
+.words-section h3 {
+    color: #667eea;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.words-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.word-item {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    color: #667eea;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    animation: popIn 0.3s ease-out;
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.no-words {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+    grid-column: 1 / -1;
+}
+
+.controls {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.rules {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+}
+
+.rules h4 {
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.rules ul {
+    list-style-position: inside;
+    color: #666;
+    line-height: 1.8;
+}
+
+.rules li {
+    margin-bottom: 5px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2em;
+    }
+
+    .letter-circle {
+        width: 250px;
+        height: 250px;
+    }
+
+    .center-letter {
+        width: 60px;
+        height: 60px;
+        font-size: 2em;
+    }
+
+    .outer-letter {
+        width: 55px;
+        height: 55px;
+        font-size: 1.5em;
+    }
+
+    .buttons {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .controls {
+        flex-direction: column;
+    }
+}
