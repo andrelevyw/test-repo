@@ -306,6 +306,58 @@
             100% { transform: scale(1) translateY(0); }
         }
 
+        /* Floating animated piece for movement */
+        .floating-piece {
+            position: fixed;
+            font-size: 2.6rem;
+            pointer-events: none;
+            z-index: 500;
+            line-height: 1;
+            filter: drop-shadow(2px 4px 8px rgba(0,0,0,0.7));
+            will-change: transform, left, top;
+        }
+
+        /* Magical trail particles for moving pieces */
+        .move-trail {
+            position: fixed;
+            pointer-events: none;
+            z-index: 499;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(201, 168, 76, 0.4), transparent);
+            animation: trailFade 0.4s ease-out forwards;
+        }
+
+        @keyframes trailFade {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(0.3); opacity: 0; }
+        }
+
+        /* Knight shadow on ground during jump */
+        .knight-shadow {
+            position: fixed;
+            pointer-events: none;
+            z-index: 498;
+            width: 30px;
+            height: 10px;
+            background: radial-gradient(ellipse, rgba(0,0,0,0.3), transparent);
+            border-radius: 50%;
+        }
+
+        /* Landing impact ring */
+        .landing-impact {
+            position: fixed;
+            pointer-events: none;
+            z-index: 499;
+            border-radius: 50%;
+            border: 2px solid rgba(201, 168, 76, 0.5);
+            animation: landingRing 0.4s ease-out forwards;
+        }
+
+        @keyframes landingRing {
+            0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+
         /* Side panel */
         .side-panel {
             width: 260px;
@@ -565,6 +617,7 @@
             }
             .board-labels .file-labels { grid-template-columns: repeat(8, 55px); }
             .piece { font-size: 2rem; }
+            .floating-piece { font-size: 2rem; }
         }
     </style>
 </head>
@@ -689,6 +742,9 @@ let kingPositions = { white: { row: 7, col: 4 }, black: { row: 0, col: 4 } };
 
 // History stack for undo
 let stateHistory = [];
+
+// Animation lock
+let animating = false;
 
 // Audio context for sounds
 let audioCtx = null;
@@ -971,7 +1027,7 @@ function updateUI() {
 // ============================================
 
 function handleSquareClick(row, col) {
-    if (gameOver) return;
+    if (gameOver || animating) return;
 
     const piece = board[row][col];
 
@@ -1224,7 +1280,196 @@ function executeMove(fromRow, fromCol, toRow, toCol) {
         return;
     }
 
-    completeMove(fromRow, fromCol, toRow, toCol, piece, captured, moveData);
+    animateAndComplete(fromRow, fromCol, toRow, toCol, piece, captured, moveData);
+}
+
+// ============================================
+// PIECE MOVEMENT ANIMATION
+// ============================================
+
+function getSquareCenter(row, col) {
+    const boardEl = document.getElementById('chessboard');
+    const boardRect = boardEl.getBoundingClientRect();
+    const squareSize = boardRect.width / 8;
+    return {
+        x: boardRect.left + col * squareSize + squareSize / 2,
+        y: boardRect.top + row * squareSize + squareSize / 2,
+    };
+}
+
+function createFloatingPiece(piece) {
+    const el = document.createElement('div');
+    el.className = `floating-piece ${piece.color}-piece`;
+    el.textContent = PIECES[piece.type][piece.color];
+    document.body.appendChild(el);
+    return el;
+}
+
+function spawnTrailParticle(x, y) {
+    const trail = document.createElement('div');
+    trail.className = 'move-trail';
+    const size = 6 + Math.random() * 8;
+    trail.style.width = size + 'px';
+    trail.style.height = size + 'px';
+    trail.style.left = (x - size / 2 + (Math.random() - 0.5) * 15) + 'px';
+    trail.style.top = (y - size / 2 + (Math.random() - 0.5) * 15) + 'px';
+    document.body.appendChild(trail);
+    setTimeout(() => trail.remove(), 400);
+}
+
+function spawnLandingImpact(x, y, isCapture) {
+    const ring = document.createElement('div');
+    ring.className = 'landing-impact';
+    const size = isCapture ? 50 : 30;
+    ring.style.width = size + 'px';
+    ring.style.height = size + 'px';
+    ring.style.left = x + 'px';
+    ring.style.top = y + 'px';
+    document.body.appendChild(ring);
+    setTimeout(() => ring.remove(), 400);
+}
+
+function animatePieceMove(el, fromRow, fromCol, toRow, toCol, options = {}) {
+    const from = getSquareCenter(fromRow, fromCol);
+    const to = getSquareCenter(toRow, toCol);
+    const isKnight = options.isKnight || false;
+    const isCapture = options.isCapture || false;
+    const duration = isKnight ? 480 : (isCapture ? 320 : 280);
+
+    el.style.left = from.x + 'px';
+    el.style.top = from.y + 'px';
+    el.style.transform = 'translate(-50%, -50%)';
+
+    let keyframes;
+
+    if (isKnight) {
+        // Arc/jump animation for knight
+        const midX = (from.x + to.x) / 2;
+        const jumpHeight = 70 + Math.abs(toRow - fromRow) * 10;
+        const midY = Math.min(from.y, to.y) - jumpHeight;
+        keyframes = [
+            { left: from.x + 'px', top: from.y + 'px', transform: 'translate(-50%, -50%) scale(1)', easing: 'ease-out' },
+            { left: midX + 'px', top: midY + 'px', transform: 'translate(-50%, -50%) scale(1.2)', offset: 0.45, easing: 'ease-in' },
+            { left: to.x + 'px', top: to.y + 'px', transform: 'translate(-50%, -50%) scale(1)' },
+        ];
+    } else if (isCapture) {
+        // Aggressive lunge for captures - accelerate into target
+        keyframes = [
+            { left: from.x + 'px', top: from.y + 'px', transform: 'translate(-50%, -50%) scale(1)', easing: 'cubic-bezier(0.4, 0, 0.9, 0.6)' },
+            { left: to.x + 'px', top: to.y + 'px', transform: 'translate(-50%, -50%) scale(1.25)', offset: 0.75, easing: 'ease-out' },
+            { left: to.x + 'px', top: to.y + 'px', transform: 'translate(-50%, -50%) scale(1)' },
+        ];
+    } else {
+        // Smooth glide with slight acceleration
+        keyframes = [
+            { left: from.x + 'px', top: from.y + 'px', transform: 'translate(-50%, -50%) scale(1)' },
+            { transform: 'translate(-50%, -50%) scale(1.05)', offset: 0.3 },
+            { left: to.x + 'px', top: to.y + 'px', transform: 'translate(-50%, -50%) scale(1)' },
+        ];
+    }
+
+    el.animate(keyframes, { duration, fill: 'forwards', easing: isKnight ? 'linear' : 'ease-in-out' });
+
+    // Spawn magical trail particles during movement
+    const trailCount = isKnight ? 8 : 5;
+    for (let i = 0; i < trailCount; i++) {
+        const t = (i + 1) / (trailCount + 1);
+        setTimeout(() => {
+            if (isKnight) {
+                const t2 = t;
+                const cx = (1 - t2) * (1 - t2) * from.x + 2 * (1 - t2) * t2 * ((from.x + to.x) / 2) + t2 * t2 * to.x;
+                const peakY = Math.min(from.y, to.y) - 70;
+                const cy = (1 - t2) * (1 - t2) * from.y + 2 * (1 - t2) * t2 * peakY + t2 * t2 * to.y;
+                spawnTrailParticle(cx, cy);
+            } else {
+                const cx = from.x + (to.x - from.x) * t;
+                const cy = from.y + (to.y - from.y) * t;
+                spawnTrailParticle(cx, cy);
+            }
+        }, duration * t * 0.8);
+    }
+
+    // Landing impact
+    setTimeout(() => {
+        spawnLandingImpact(to.x, to.y, isCapture);
+    }, duration - 30);
+
+    return duration;
+}
+
+function animateAndComplete(fromRow, fromCol, toRow, toCol, piece, captured, moveData, promotionType) {
+    animating = true;
+
+    const isEnPassant = piece.type === 'P' && enPassantTarget &&
+        toRow === enPassantTarget.row && toCol === enPassantTarget.col;
+    const isCapture = captured !== null || isEnPassant;
+    const isCastling = moveData?.castling || false;
+
+    const boardEl = document.getElementById('chessboard');
+
+    // Hide source piece in DOM
+    const sourceSquare = boardEl.children[fromRow * 8 + fromCol];
+    const sourcePieceEl = sourceSquare?.querySelector('.piece');
+    if (sourcePieceEl) sourcePieceEl.style.visibility = 'hidden';
+
+    // Clear selection/valid-move highlights visually
+    boardEl.querySelectorAll('.selected, .valid-move, .valid-capture').forEach(sq => {
+        sq.classList.remove('selected', 'valid-move', 'valid-capture');
+    });
+
+    // Animate main piece
+    const floater = createFloatingPiece(piece);
+    const duration = animatePieceMove(floater, fromRow, fromCol, toRow, toCol, {
+        isKnight: piece.type === 'N',
+        isCapture: isCapture,
+    });
+
+    // Animate rook for castling
+    let rookFloater = null;
+    if (isCastling) {
+        const baseRow = piece.color === 'white' ? 7 : 0;
+        const rookFromCol = isCastling === 'kingside' ? 7 : 0;
+        const rookToCol = isCastling === 'kingside' ? 5 : 3;
+        const rook = board[baseRow][rookFromCol];
+
+        const rookSquare = boardEl.children[baseRow * 8 + rookFromCol];
+        const rookPieceEl = rookSquare?.querySelector('.piece');
+        if (rookPieceEl) rookPieceEl.style.visibility = 'hidden';
+
+        rookFloater = createFloatingPiece(rook);
+        animatePieceMove(rookFloater, baseRow, rookFromCol, baseRow, rookToCol, {});
+    }
+
+    // Smash captured piece during animation
+    if (captured) {
+        const targetSquare = boardEl.children[toRow * 8 + toCol];
+        const targetPieceEl = targetSquare?.querySelector('.piece');
+        if (targetPieceEl) {
+            setTimeout(() => {
+                targetPieceEl.classList.add('piece-smash');
+            }, duration * 0.65);
+        }
+    }
+
+    // For en passant, smash the captured pawn at its actual position
+    if (isEnPassant) {
+        const capturedRow = piece.color === 'white' ? toRow + 1 : toRow - 1;
+        const capturedSquare = boardEl.children[capturedRow * 8 + toCol];
+        const capturedPieceEl = capturedSquare?.querySelector('.piece');
+        if (capturedPieceEl) {
+            setTimeout(() => {
+                capturedPieceEl.classList.add('piece-smash');
+            }, duration * 0.65);
+        }
+    }
+
+    // After animation completes, finalize the move
+    setTimeout(() => {
+        floater.remove();
+        if (rookFloater) rookFloater.remove();
+        animating = false;
+        completeMove(fromRow, fromCol, toRow, toCol, piece, captured, moveData, promotionType);
+    }, duration + 40);
 }
 
 function completeMove(fromRow, fromCol, toRow, toCol, piece, captured, moveData, promotionType) {
@@ -1306,9 +1551,14 @@ function completeMove(fromRow, fromCol, toRow, toCol, piece, captured, moveData,
     // Set last move
     lastMove = { fromRow, fromCol, toRow, toCol };
 
-    // Capture animation
+    // Capture animation - fix en passant effect position
     if (captured) {
-        triggerCaptureEffect(toRow, toCol, piece, captured);
+        if (isEnPassant) {
+            const epEffectRow = piece.color === 'white' ? toRow + 1 : toRow - 1;
+            triggerCaptureEffect(epEffectRow, toCol, piece, captured);
+        } else {
+            triggerCaptureEffect(toRow, toCol, piece, captured);
+        }
         playCaptureSound();
     } else {
         playMoveSound();
@@ -1438,7 +1688,7 @@ function showPromotionDialog(fromRow, fromCol, toRow, toCol, moveData) {
             modal.classList.remove('active');
             const piece = board[fromRow][fromCol];
             const captured = board[toRow][toCol];
-            completeMove(fromRow, fromCol, toRow, toCol, piece, captured, moveData, type);
+            animateAndComplete(fromRow, fromCol, toRow, toCol, piece, captured, moveData, type);
         });
         choices.appendChild(btn);
     }
