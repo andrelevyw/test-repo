@@ -1,848 +1,253 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez de Bruxo - Wizard Chess</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;700&family=MedievalSharp&display=swap');
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: #0a0a0f;
-            color: #d4af37;
-            font-family: 'Cinzel', serif;
-            min-height: 100vh;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* Animated background */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background:
-                radial-gradient(ellipse at 20% 50%, rgba(30, 10, 50, 0.8) 0%, transparent 60%),
-                radial-gradient(ellipse at 80% 50%, rgba(10, 20, 50, 0.8) 0%, transparent 60%),
-                radial-gradient(ellipse at 50% 100%, rgba(50, 20, 10, 0.5) 0%, transparent 50%);
-            z-index: -2;
-            animation: bgPulse 8s ease-in-out infinite alternate;
-        }
-
-        @keyframes bgPulse {
-            0% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-
-        /* Floating particles */
-        .particles {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        .particle {
-            position: absolute;
-            width: 3px;
-            height: 3px;
-            background: rgba(212, 175, 55, 0.6);
-            border-radius: 50%;
-            animation: float linear infinite;
-            box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
-        }
-
-        @keyframes float {
-            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; }
-        }
-
-        /* Title */
-        .game-title {
-            text-align: center;
-            padding: 12px 0 8px;
-            position: relative;
-        }
-
-        .game-title h1 {
-            font-family: 'Cinzel Decorative', cursive;
-            font-size: 2.2rem;
-            font-weight: 900;
-            background: linear-gradient(135deg, #d4af37 0%, #f5e6a3 30%, #d4af37 50%, #b8860b 70%, #d4af37 100%);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 3s ease-in-out infinite;
-            text-shadow: none;
-            filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
-        }
-
-        .game-title .subtitle {
-            font-family: 'MedievalSharp', cursive;
-            font-size: 0.9rem;
-            color: rgba(212, 175, 55, 0.6);
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            margin-top: 2px;
-        }
-
-        @keyframes shimmer {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-
-        /* Main layout */
-        .game-container {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 24px;
-            padding: 0 20px 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Side panels */
-        .side-panel {
-            width: 220px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .panel-box {
-            background: linear-gradient(135deg, rgba(20, 15, 30, 0.9), rgba(30, 20, 40, 0.9));
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 8px;
-            padding: 14px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .panel-box::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #d4af37, transparent);
-        }
-
-        .panel-box h3 {
-            font-family: 'Cinzel Decorative', cursive;
-            font-size: 0.85rem;
-            color: #d4af37;
-            margin-bottom: 10px;
-            text-align: center;
-            letter-spacing: 2px;
-        }
-
-        /* Captured pieces */
-        .captured-pieces {
-            min-height: 40px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2px;
-            justify-content: center;
-        }
-
-        .captured-piece {
-            font-size: 1.3rem;
-            opacity: 0.7;
-            filter: grayscale(30%);
-            animation: capturedAppear 0.5s ease-out;
-        }
-
-        @keyframes capturedAppear {
-            0% { transform: scale(2) rotate(180deg); opacity: 0; }
-            50% { transform: scale(1.3) rotate(-10deg); opacity: 0.5; }
-            100% { transform: scale(1) rotate(0deg); opacity: 0.7; }
-        }
-
-        /* Move log */
-        .move-log {
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: 'MedievalSharp', cursive;
-            font-size: 0.8rem;
-            color: rgba(212, 175, 55, 0.7);
-        }
-
-        .move-log::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .move-log::-webkit-scrollbar-thumb {
-            background: rgba(212, 175, 55, 0.3);
-            border-radius: 2px;
-        }
-
-        .move-entry {
-            padding: 3px 6px;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .move-entry:last-child {
-            background: rgba(212, 175, 55, 0.1);
-            color: #d4af37;
-        }
-
-        /* Player info */
-        .player-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
-        }
-
-        .player-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-            border: 2px solid rgba(212, 175, 55, 0.4);
-        }
-
-        .player-avatar.white { background: rgba(255, 255, 255, 0.1); }
-        .player-avatar.black { background: rgba(0, 0, 0, 0.3); }
-
-        .player-details .player-name {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #d4af37;
-        }
-
-        .player-details .player-house {
-            font-family: 'MedievalSharp', cursive;
-            font-size: 0.7rem;
-            color: rgba(212, 175, 55, 0.5);
-        }
-
-        .active-player .player-avatar {
-            border-color: #d4af37;
-            box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
-            animation: activePulse 2s ease-in-out infinite;
-        }
-
-        @keyframes activePulse {
-            0%, 100% { box-shadow: 0 0 12px rgba(212, 175, 55, 0.3); }
-            50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.7); }
-        }
-
-        /* Chess board */
-        .board-wrapper {
-            position: relative;
-        }
-
-        .board-frame {
-            padding: 4px;
-            background: linear-gradient(135deg, #3d2b1f, #5c3a21, #3d2b1f);
-            border-radius: 6px;
-            box-shadow:
-                0 0 30px rgba(0, 0, 0, 0.8),
-                0 0 60px rgba(30, 10, 5, 0.5),
-                inset 0 0 20px rgba(0, 0, 0, 0.5);
-            border: 2px solid rgba(212, 175, 55, 0.3);
-        }
-
-        .board-labels-wrapper {
-            display: grid;
-            grid-template-columns: 22px 1fr 22px;
-            grid-template-rows: 22px 1fr 22px;
-        }
-
-        .board-label {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Cinzel', serif;
-            font-size: 0.7rem;
-            color: rgba(212, 175, 55, 0.5);
-        }
-
-        .file-labels {
-            display: flex;
-        }
-
-        .file-labels .board-label {
-            flex: 1;
-        }
-
-        .rank-labels {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .rank-labels .board-label {
-            flex: 1;
-        }
-
-        #chessboard {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            grid-template-rows: repeat(8, 1fr);
-            width: 520px;
-            height: 520px;
-            position: relative;
-        }
-
-        .square {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-
-        .square.light {
-            background: linear-gradient(135deg, #c8b590, #d4c4a0);
-        }
-
-        .square.dark {
-            background: linear-gradient(135deg, #5c3a21, #6b4423);
-        }
-
-        .square:hover {
-            filter: brightness(1.15);
-        }
-
-        .square.selected {
-            box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.8);
-            animation: selectedGlow 1.5s ease-in-out infinite;
-        }
-
-        @keyframes selectedGlow {
-            0%, 100% { box-shadow: inset 0 0 15px rgba(212, 175, 55, 0.6); }
-            50% { box-shadow: inset 0 0 25px rgba(212, 175, 55, 1); }
-        }
-
-        .square.valid-move::after {
-            content: '';
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            background: radial-gradient(circle, rgba(100, 200, 100, 0.7), rgba(100, 200, 100, 0.2));
-            border-radius: 50%;
-            z-index: 2;
-            animation: moveHint 1.5s ease-in-out infinite;
-        }
-
-        .square.valid-capture::after {
-            content: '';
-            position: absolute;
-            inset: 3px;
-            border: 3px solid rgba(255, 50, 50, 0.6);
-            border-radius: 50%;
-            z-index: 2;
-            animation: captureHint 1s ease-in-out infinite;
-        }
-
-        @keyframes moveHint {
-            0%, 100% { transform: scale(0.8); opacity: 0.6; }
-            50% { transform: scale(1.1); opacity: 1; }
-        }
-
-        @keyframes captureHint {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.9; }
-        }
-
-        .square.last-move {
-            background: rgba(212, 175, 55, 0.15);
-        }
-
-        .square.check {
-            animation: checkFlash 0.8s ease-in-out infinite;
-        }
-
-        @keyframes checkFlash {
-            0%, 100% { box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.3); }
-            50% { box-shadow: inset 0 0 35px rgba(255, 0, 0, 0.7); }
-        }
-
-        /* Chess pieces */
-        .piece {
-            font-size: 2.8rem;
-            cursor: grab;
-            z-index: 3;
-            transition: transform 0.15s;
-            filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.5));
-            user-select: none;
-            line-height: 1;
-        }
-
-        .piece:hover {
-            transform: scale(1.1);
-        }
-
-        .piece.white-piece {
-            filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.5)) drop-shadow(0 0 3px rgba(255,255,255,0.3));
-        }
-
-        .piece.black-piece {
-            filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.7));
-        }
-
-        /* Destruction animation overlay */
-        .destruction-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        .destruction-piece {
-            position: absolute;
-            font-size: 2.8rem;
-            z-index: 11;
-            pointer-events: none;
-        }
-
-        @keyframes pieceDestroy {
-            0% { transform: scale(1) rotate(0deg); opacity: 1; }
-            30% { transform: scale(1.3) rotate(-15deg); opacity: 1; }
-            60% { transform: scale(0.8) rotate(30deg); opacity: 0.7; }
-            100% { transform: scale(0) rotate(180deg) translateY(20px); opacity: 0; }
-        }
-
-        @keyframes pieceSmash {
-            0% { transform: scale(1); opacity: 1; }
-            20% { transform: scale(1.4); opacity: 1; }
-            100% { transform: scale(0) rotate(360deg); opacity: 0; }
-        }
-
-        .debris {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: #aaa;
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        @keyframes debrisFly {
-            0% { transform: translate(0, 0) scale(1); opacity: 1; }
-            100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
-        }
-
-        .spark {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: #d4af37;
-            border-radius: 50%;
-            pointer-events: none;
-            box-shadow: 0 0 6px #d4af37;
-        }
-
-        @keyframes sparkFly {
-            0% { transform: translate(0, 0) scale(1); opacity: 1; }
-            100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
-        }
-
-        /* Spell flash */
-        .spell-flash {
-            position: absolute;
-            inset: 0;
-            z-index: 9;
-            pointer-events: none;
-            background: radial-gradient(circle at var(--x) var(--y), rgba(212, 175, 55, 0.6), transparent 60%);
-            animation: spellFlash 0.4s ease-out forwards;
-        }
-
-        @keyframes spellFlash {
-            0% { opacity: 1; transform: scale(0.5); }
-            100% { opacity: 0; transform: scale(2); }
-        }
-
-        /* Status bar */
-        .status-bar {
-            text-align: center;
-            padding: 8px;
-            font-family: 'MedievalSharp', cursive;
-            font-size: 1rem;
-            color: #d4af37;
-            min-height: 36px;
-        }
-
-        .status-bar .message {
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(-5px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Buttons */
-        .game-buttons {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .btn {
-            font-family: 'Cinzel', serif;
-            font-size: 0.75rem;
-            padding: 8px 16px;
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            background: linear-gradient(135deg, rgba(30, 20, 10, 0.9), rgba(50, 30, 15, 0.9));
-            color: #d4af37;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.2s;
-            letter-spacing: 1px;
-        }
-
-        .btn:hover {
-            border-color: #d4af37;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-            background: linear-gradient(135deg, rgba(50, 30, 15, 0.9), rgba(70, 40, 20, 0.9));
-        }
-
-        .btn:active {
-            transform: scale(0.97);
-        }
-
-        /* Promotion modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 100;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .promotion-modal {
-            background: linear-gradient(135deg, #1a1020, #2a1530);
-            border: 2px solid #d4af37;
-            border-radius: 12px;
-            padding: 24px;
-            text-align: center;
-        }
-
-        .promotion-modal h2 {
-            font-family: 'Cinzel Decorative', cursive;
-            font-size: 1.2rem;
-            color: #d4af37;
-            margin-bottom: 16px;
-        }
-
-        .promotion-choices {
-            display: flex;
-            gap: 12px;
-        }
-
-        .promotion-choice {
-            width: 70px;
-            height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            background: rgba(212, 175, 55, 0.1);
-            border: 2px solid rgba(212, 175, 55, 0.3);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .promotion-choice:hover {
-            border-color: #d4af37;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
-            transform: scale(1.1);
-        }
-
-        /* Game over modal */
-        .game-over-modal {
-            background: linear-gradient(135deg, #1a1020, #2a1530);
-            border: 2px solid #d4af37;
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-            max-width: 400px;
-            animation: modalAppear 0.5s ease-out;
-        }
-
-        @keyframes modalAppear {
-            0% { transform: scale(0.5) rotate(-5deg); opacity: 0; }
-            100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-
-        .game-over-modal h2 {
-            font-family: 'Cinzel Decorative', cursive;
-            font-size: 1.8rem;
-            background: linear-gradient(135deg, #d4af37, #f5e6a3, #d4af37);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-        }
-
-        .game-over-modal .result-text {
-            font-family: 'MedievalSharp', cursive;
-            font-size: 1.1rem;
-            color: rgba(212, 175, 55, 0.8);
-            margin-bottom: 24px;
-        }
-
-        .game-over-modal .quote {
-            font-family: 'MedievalSharp', cursive;
-            font-size: 0.85rem;
-            color: rgba(212, 175, 55, 0.5);
-            font-style: italic;
-            margin-bottom: 20px;
-        }
-
-        /* Voice bubble */
-        .voice-bubble {
-            position: absolute;
-            bottom: -40px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(20, 15, 30, 0.95);
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            border-radius: 8px;
-            padding: 6px 14px;
-            font-family: 'MedievalSharp', cursive;
-            font-size: 0.8rem;
-            color: #d4af37;
-            white-space: nowrap;
-            z-index: 20;
-            animation: bubbleAppear 0.3s ease-out, bubbleFade 0.5s ease-in 2s forwards;
-            pointer-events: none;
-        }
-
-        .voice-bubble::before {
-            content: '';
-            position: absolute;
-            top: -6px;
-            left: 50%;
-            transform: translateX(-50%) rotate(45deg);
-            width: 10px;
-            height: 10px;
-            background: rgba(20, 15, 30, 0.95);
-            border-top: 1px solid rgba(212, 175, 55, 0.4);
-            border-left: 1px solid rgba(212, 175, 55, 0.4);
-        }
-
-        @keyframes bubbleAppear {
-            0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
-            100% { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-
-        @keyframes bubbleFade {
-            100% { opacity: 0; }
-        }
-
-        /* Screen shake */
-        @keyframes screenShake {
-            0%, 100% { transform: translate(0, 0); }
-            10% { transform: translate(-3px, -2px); }
-            20% { transform: translate(3px, 2px); }
-            30% { transform: translate(-2px, 3px); }
-            40% { transform: translate(2px, -3px); }
-            50% { transform: translate(-3px, 1px); }
-            60% { transform: translate(3px, -1px); }
-            70% { transform: translate(-1px, 3px); }
-            80% { transform: translate(1px, -2px); }
-            90% { transform: translate(-2px, -1px); }
-        }
-
-        .screen-shake {
-            animation: screenShake 0.4s ease-out;
-        }
-
-        /* Difficulty selector */
-        .difficulty-selector {
-            display: flex;
-            gap: 4px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .diff-btn {
-            font-family: 'MedievalSharp', cursive;
-            font-size: 0.7rem;
-            padding: 4px 10px;
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            background: transparent;
-            color: rgba(212, 175, 55, 0.6);
-            cursor: pointer;
-            border-radius: 3px;
-            transition: all 0.2s;
-        }
-
-        .diff-btn.active {
-            border-color: #d4af37;
-            color: #d4af37;
-            background: rgba(212, 175, 55, 0.15);
-        }
-
-        .diff-btn:hover {
-            border-color: #d4af37;
-        }
-
-        /* Responsive */
-        @media (max-width: 900px) {
-            .game-container {
-                flex-direction: column;
-                align-items: center;
-            }
-            .side-panel {
-                width: 100%;
-                max-width: 520px;
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-            .side-panel .panel-box {
-                flex: 1;
-                min-width: 200px;
-            }
-            #chessboard {
-                width: min(520px, 90vw);
-                height: min(520px, 90vw);
-            }
-            .piece {
-                font-size: min(2.8rem, 6vw);
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xadrez de Bruxo 3D - Wizard Chess</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;700&family=MedievalSharp&display=swap");
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:#d4af37;font-family:Cinzel,serif;overflow:hidden;height:100vh;user-select:none}
+#gameCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.hud{position:fixed;z-index:10;pointer-events:none}
+.hud *{pointer-events:auto}
+.top-bar{top:0;left:0;right:0;text-align:center;padding:10px;background:linear-gradient(180deg,rgba(10,10,15,0.9),transparent)}
+.top-bar h1{font-family:Cinzel Decorative,cursive;font-size:2rem;font-weight:900;background:linear-gradient(135deg,#d4af37,#f5e6a3,#d4af37,#b8860b,#d4af37);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 3s ease-in-out infinite;filter:drop-shadow(0 0 10px rgba(212,175,55,0.3))}
+.top-bar .subtitle{font-family:MedievalSharp,cursive;font-size:0.8rem;color:rgba(212,175,55,0.6);letter-spacing:4px;text-transform:uppercase}
+@keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.status-msg{font-family:MedievalSharp,cursive;font-size:1rem;margin-top:5px;color:#d4af37;text-shadow:0 0 10px rgba(212,175,55,0.5)}
+.left-panel{left:10px;top:80px;width:200px}
+.right-panel{right:10px;top:80px;width:200px}
+.panel-box{background:linear-gradient(135deg,rgba(20,15,30,0.92),rgba(30,20,40,0.92));border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:12px;margin-bottom:10px;position:relative;overflow:hidden;backdrop-filter:blur(10px)}
+.panel-box::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#d4af37,transparent)}
+.panel-box h3{font-family:Cinzel Decorative,cursive;font-size:0.8rem;color:#d4af37;margin-bottom:8px;text-align:center;letter-spacing:2px}
+.player-info{display:flex;align-items:center;gap:8px;padding:6px 0}
+.player-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:2px solid rgba(212,175,55,0.4)}
+.player-avatar.white{background:rgba(255,255,255,0.1)}
+.player-avatar.black{background:rgba(0,0,0,0.3)}
+.player-details .player-name{font-size:0.8rem;font-weight:700;color:#d4af37}
+.player-details .player-house{font-family:MedievalSharp,cursive;font-size:0.65rem;color:rgba(212,175,55,0.5)}
+.active-player .player-avatar{border-color:#d4af37;box-shadow:0 0 12px rgba(212,175,55,0.5);animation:activePulse 2s ease-in-out infinite}
+@keyframes activePulse{0%,100%{box-shadow:0 0 12px rgba(212,175,55,0.3)}50%{box-shadow:0 0 20px rgba(212,175,55,0.7)}}
+.captured-pieces{min-height:30px;display:flex;flex-wrap:wrap;gap:1px;justify-content:center}
+.captured-piece{font-size:1.1rem;opacity:0.7;filter:grayscale(30%)}
+.move-log{max-height:180px;overflow-y:auto;font-family:MedievalSharp,cursive;font-size:0.75rem;color:rgba(212,175,55,0.7)}
+.move-log::-webkit-scrollbar{width:3px}
+.move-log::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.3);border-radius:2px}
+.move-entry{padding:2px 5px;border-bottom:1px solid rgba(212,175,55,0.1);display:flex;justify-content:space-between}
+.move-entry:last-child{background:rgba(212,175,55,0.1);color:#d4af37}
+.game-buttons{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.btn{font-family:Cinzel,serif;font-size:0.7rem;padding:6px 12px;border:1px solid rgba(212,175,55,0.4);background:linear-gradient(135deg,rgba(30,20,10,0.9),rgba(50,30,15,0.9));color:#d4af37;cursor:pointer;border-radius:4px;transition:all 0.2s;letter-spacing:1px}
+.btn:hover{border-color:#d4af37;box-shadow:0 0 15px rgba(212,175,55,0.3);background:linear-gradient(135deg,rgba(50,30,15,0.9),rgba(70,40,20,0.9))}
+.difficulty-selector{display:flex;gap:4px;justify-content:center}
+.diff-btn{font-family:MedievalSharp,cursive;font-size:0.65rem;padding:3px 8px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:rgba(212,175,55,0.6);cursor:pointer;border-radius:3px;transition:all 0.2s}
+.diff-btn.active{border-color:#d4af37;color:#d4af37;background:rgba(212,175,55,0.15)}
+.diff-btn:hover{border-color:#d4af37}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.promotion-modal,.game-over-modal{background:linear-gradient(135deg,#1a1020,#2a1530);border:2px solid #d4af37;border-radius:12px;padding:24px;text-align:center}
+.promotion-modal h2,.game-over-modal h2{font-family:Cinzel Decorative,cursive;font-size:1.3rem;background:linear-gradient(135deg,#d4af37,#f5e6a3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px}
+.promotion-choices{display:flex;gap:10px;justify-content:center}
+.promotion-choice{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;background:rgba(212,175,55,0.1);border:2px solid rgba(212,175,55,0.3);border-radius:8px;cursor:pointer;transition:all 0.2s}
+.promotion-choice:hover{border-color:#d4af37;box-shadow:0 0 20px rgba(212,175,55,0.4);transform:scale(1.1)}
+.game-over-modal{max-width:380px;animation:modalAppear 0.5s ease-out}
+@keyframes modalAppear{0%{transform:scale(0.5) rotate(-5deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
+.game-over-modal .result-text{font-family:MedievalSharp,cursive;font-size:1rem;color:rgba(212,175,55,0.8);margin-bottom:20px}
+.game-over-modal .quote{font-family:MedievalSharp,cursive;font-size:0.8rem;color:rgba(212,175,55,0.5);font-style:italic;margin-bottom:16px}
+.voice-overlay{position:fixed;bottom:20%;left:50%;transform:translateX(-50%);z-index:50;pointer-events:none}
+.voice-text{font-family:MedievalSharp,cursive;font-size:1.4rem;color:#d4af37;text-shadow:0 0 20px rgba(212,175,55,0.8),0 0 40px rgba(212,175,55,0.4);opacity:0;transition:opacity 0.3s;text-align:center;white-space:nowrap}
+.voice-text.show{opacity:1;animation:voiceIn 0.4s ease-out}
+@keyframes voiceIn{0%{transform:scale(0.8) translateY(10px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+.click-hint{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:10;font-family:MedievalSharp,cursive;font-size:0.7rem;color:rgba(212,175,55,0.4)}
+@media(max-width:900px){.left-panel,.right-panel{display:none}.top-bar h1{font-size:1.4rem}}
+</style>
 </head>
 <body>
-
-<div class="particles" id="particles"></div>
-
-<div class="game-title">
-    <h1>Xadrez de Bruxo</h1>
-    <div class="subtitle">Wizard's Chess</div>
+<canvas id="gameCanvas"></canvas>
+<div class="hud top-bar">
+<h1>Xadrez de Bruxo</h1>
+<div class="subtitle">Wizard&#39;s Chess</div>
+<div class="status-msg" id="statusMessage">Brancas iniciam. Que comece o duelo!</div>
 </div>
-
-<div class="status-bar">
-    <div class="message" id="statusMessage">Brancas iniciam. Que comece o duelo!</div>
+<div class="hud left-panel">
+<div class="panel-box">
+<div class="player-info active-player" id="whitePlayer">
+<div class="player-avatar white">&#9812;</div>
+<div class="player-details"><div class="player-name">Voce</div><div class="player-house">Grifinoria</div></div>
 </div>
-
-<div class="game-container">
-    <!-- Left Panel -->
-    <div class="side-panel">
-        <div class="panel-box">
-            <div class="player-info active-player" id="whitePlayer">
-                <div class="player-avatar white">&#9812;</div>
-                <div class="player-details">
-                    <div class="player-name">Voce</div>
-                    <div class="player-house">Grifinoria</div>
-                </div>
-            </div>
-            <h3>Capturadas</h3>
-            <div class="captured-pieces" id="whiteCaptured"></div>
-        </div>
-
-        <div class="panel-box">
-            <h3>Pergaminho</h3>
-            <div class="move-log" id="moveLog"></div>
-        </div>
-    </div>
-
-    <!-- Board -->
-    <div class="board-wrapper">
-        <div class="board-frame">
-            <div class="board-labels-wrapper">
-                <div></div>
-                <div class="file-labels" id="topFiles"></div>
-                <div></div>
-                <div class="rank-labels" id="leftRanks"></div>
-                <div id="chessboard"></div>
-                <div class="rank-labels" id="rightRanks"></div>
-                <div></div>
-                <div class="file-labels" id="bottomFiles"></div>
-                <div></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Panel -->
-    <div class="side-panel">
-        <div class="panel-box">
-            <div class="player-info" id="blackPlayer">
-                <div class="player-avatar black">&#9818;</div>
-                <div class="player-details">
-                    <div class="player-name">McGonagall</div>
-                    <div class="player-house">IA Magica</div>
-                </div>
-            </div>
-            <h3>Capturadas</h3>
-            <div class="captured-pieces" id="blackCaptured"></div>
-        </div>
-
-        <div class="panel-box">
-            <h3>Dificuldade</h3>
-            <div class="difficulty-selector">
-                <button class="diff-btn" data-depth="1">Trouxa</button>
-                <button class="diff-btn active" data-depth="3">Bruxo</button>
-                <button class="diff-btn" data-depth="5">Mestre</button>
-            </div>
-        </div>
-
-        <div class="panel-box">
-            <h3>Feiticos</h3>
-            <div class="game-buttons">
-                <button class="btn" onclick="newGame()">Novo Jogo</button>
-                <button class="btn" onclick="undoMove()">Desfazer</button>
-                <button class="btn" onclick="flipBoard()">Girar</button>
-            </div>
-        </div>
-    </div>
+<h3>Capturadas</h3>
+<div class="captured-pieces" id="whiteCaptured"></div>
 </div>
-
-<!-- Promotion Modal -->
+<div class="panel-box">
+<h3>Pergaminho</h3>
+<div class="move-log" id="moveLog"></div>
+</div>
+</div>
+<div class="hud right-panel">
+<div class="panel-box">
+<div class="player-info" id="blackPlayer">
+<div class="player-avatar black">&#9818;</div>
+<div class="player-details"><div class="player-name">McGonagall</div><div class="player-house">IA Magica</div></div>
+</div>
+<h3>Capturadas</h3>
+<div class="captured-pieces" id="blackCaptured"></div>
+</div>
+<div class="panel-box">
+<h3>Dificuldade</h3>
+<div class="difficulty-selector">
+<button class="diff-btn" data-depth="1">Trouxa</button>
+<button class="diff-btn active" data-depth="3">Bruxo</button>
+<button class="diff-btn" data-depth="5">Mestre</button>
+</div>
+</div>
+<div class="panel-box">
+<h3>Feiticos</h3>
+<div class="game-buttons">
+<button class="btn" onclick="newGame()">Novo Jogo</button>
+<button class="btn" onclick="undoMove()">Desfazer</button>
+</div>
+</div>
+</div>
 <div class="modal-overlay" id="promotionModal">
-    <div class="promotion-modal">
-        <h2>Promover Peao</h2>
-        <p style="color: rgba(212,175,55,0.6); font-family: MedievalSharp; font-size: 0.85rem; margin-bottom: 16px;">
-            Escolha a nova forma da sua peca
-        </p>
-        <div class="promotion-choices" id="promotionChoices"></div>
-    </div>
+<div class="promotion-modal">
+<h2>Promover Peao</h2>
+<p style="color:rgba(212,175,55,0.6);font-family:MedievalSharp;font-size:0.8rem;margin-bottom:12px">Escolha a nova forma</p>
+<div class="promotion-choices" id="promotionChoices"></div>
 </div>
-
-<!-- Game Over Modal -->
+</div>
 <div class="modal-overlay" id="gameOverModal">
-    <div class="game-over-modal">
-        <h2 id="gameOverTitle"></h2>
-        <div class="result-text" id="gameOverText"></div>
-        <div class="quote" id="gameOverQuote"></div>
-        <button class="btn" onclick="newGame()" style="font-size: 1rem; padding: 12px 32px;">
-            Revanche Magica
-        </button>
-    </div>
+<div class="game-over-modal">
+<h2 id="gameOverTitle"></h2>
+<div class="result-text" id="gameOverText"></div>
+<div class="quote" id="gameOverQuote"></div>
+<button class="btn" onclick="newGame()" style="font-size:1rem;padding:12px 32px">Revanche Magica</button>
 </div>
-
+</div>
+<div class="voice-overlay"><div class="voice-text" id="voiceText"></div></div>
+<div class="click-hint">Clique nas pecas para jogar | Arraste para girar a camera</div>
 <script>
 // ========================
-// WIZARD CHESS ENGINE
+// SOUND ENGINE (Web Audio API)
 // ========================
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
 
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new AudioCtx();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+function playTone(freq, duration, type, volume, attack, decay) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(volume || 0.3, audioCtx.currentTime + (attack || 0.01));
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (duration || 0.3));
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + (duration || 0.3) + 0.1);
+}
+
+function playNoise(duration, volume) {
+    if (!audioCtx) return;
+    const bufferSize = audioCtx.sampleRate * duration;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+    }
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(volume || 0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    source.connect(gain);
+    gain.connect(audioCtx.destination);
+    source.start();
+}
+
+function soundMove() {
+    playTone(300, 0.12, 'sine', 0.15, 0.005, 0.1);
+    setTimeout(() => playTone(450, 0.08, 'sine', 0.1), 80);
+}
+
+function soundCapture() {
+    playNoise(0.4, 0.35);
+    playTone(150, 0.3, 'sawtooth', 0.2, 0.01, 0.2);
+    setTimeout(() => playTone(80, 0.5, 'square', 0.15), 100);
+    setTimeout(() => playNoise(0.3, 0.2), 150);
+    setTimeout(() => playTone(200, 0.2, 'triangle', 0.1), 250);
+}
+
+function soundCheck() {
+    playTone(600, 0.15, 'square', 0.2);
+    setTimeout(() => playTone(800, 0.15, 'square', 0.2), 150);
+    setTimeout(() => playTone(600, 0.3, 'square', 0.15), 300);
+}
+
+function soundCheckmate() {
+    playTone(400, 0.2, 'sawtooth', 0.2);
+    setTimeout(() => playTone(500, 0.2, 'sawtooth', 0.2), 200);
+    setTimeout(() => playTone(600, 0.2, 'sawtooth', 0.2), 400);
+    setTimeout(() => playTone(800, 0.5, 'sawtooth', 0.3), 600);
+    setTimeout(() => playNoise(0.6, 0.15), 700);
+}
+
+function soundSelect() {
+    playTone(500, 0.08, 'sine', 0.1);
+}
+
+function soundCastle() {
+    playTone(200, 0.2, 'triangle', 0.15);
+    setTimeout(() => playTone(250, 0.2, 'triangle', 0.15), 150);
+    setTimeout(() => playTone(300, 0.3, 'triangle', 0.2), 300);
+}
+
+function soundPromotion() {
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => playTone(400 + i * 100, 0.15, 'sine', 0.15), i * 100);
+    }
+    setTimeout(() => playNoise(0.3, 0.1), 400);
+}
+
+// Ambient magical hum
+function startAmbient() {
+    if (!audioCtx) return;
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(55, audioCtx.currentTime);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(82.5, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc1.start();
+    osc2.start();
+    // Subtle LFO
+    const lfo = audioCtx.createOscillator();
+    lfo.frequency.setValueAtTime(0.3, audioCtx.currentTime);
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.setValueAtTime(0.008, audioCtx.currentTime);
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain.gain);
+    lfo.start();
+}
+
+// ========================
+// CHESS ENGINE (kept from original)
+// ========================
 const PIECES = {
     K: { name: 'Rei', symbol: { w: '\u2654', b: '\u265A' }, value: 0 },
     Q: { name: 'Rainha', symbol: { w: '\u2655', b: '\u265B' }, value: 900 },
@@ -852,119 +257,28 @@ const PIECES = {
     P: { name: 'Peao', symbol: { w: '\u2659', b: '\u265F' }, value: 100 }
 };
 
-// Piece-square tables for positional evaluation
 const PST = {
-    P: [
-        0,  0,  0,  0,  0,  0,  0,  0,
-        50, 50, 50, 50, 50, 50, 50, 50,
-        10, 10, 20, 30, 30, 20, 10, 10,
-        5,  5, 10, 25, 25, 10,  5,  5,
-        0,  0,  0, 20, 20,  0,  0,  0,
-        5, -5,-10,  0,  0,-10, -5,  5,
-        5, 10, 10,-20,-20, 10, 10,  5,
-        0,  0,  0,  0,  0,  0,  0,  0
-    ],
-    N: [
-        -50,-40,-30,-30,-30,-30,-40,-50,
-        -40,-20,  0,  0,  0,  0,-20,-40,
-        -30,  0, 10, 15, 15, 10,  0,-30,
-        -30,  5, 15, 20, 20, 15,  5,-30,
-        -30,  0, 15, 20, 20, 15,  0,-30,
-        -30,  5, 10, 15, 15, 10,  5,-30,
-        -40,-20,  0,  5,  5,  0,-20,-40,
-        -50,-40,-30,-30,-30,-30,-40,-50
-    ],
-    B: [
-        -20,-10,-10,-10,-10,-10,-10,-20,
-        -10,  0,  0,  0,  0,  0,  0,-10,
-        -10,  0, 10, 10, 10, 10,  0,-10,
-        -10,  5,  5, 10, 10,  5,  5,-10,
-        -10,  0, 10, 10, 10, 10,  0,-10,
-        -10, 10, 10, 10, 10, 10, 10,-10,
-        -10,  5,  0,  0,  0,  0,  5,-10,
-        -20,-10,-10,-10,-10,-10,-10,-20
-    ],
-    R: [
-        0,  0,  0,  0,  0,  0,  0,  0,
-        5, 10, 10, 10, 10, 10, 10,  5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        0,  0,  0,  5,  5,  0,  0,  0
-    ],
-    Q: [
-        -20,-10,-10, -5, -5,-10,-10,-20,
-        -10,  0,  0,  0,  0,  0,  0,-10,
-        -10,  0,  5,  5,  5,  5,  0,-10,
-        -5,  0,  5,  5,  5,  5,  0, -5,
-        0,  0,  5,  5,  5,  5,  0, -5,
-        -10,  5,  5,  5,  5,  5,  0,-10,
-        -10,  0,  5,  0,  0,  0,  0,-10,
-        -20,-10,-10, -5, -5,-10,-10,-20
-    ],
-    K: [
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -20,-30,-30,-40,-40,-30,-30,-20,
-        -10,-20,-20,-20,-20,-20,-20,-10,
-        20, 20,  0,  0,  0,  0, 20, 20,
-        20, 30, 10,  0,  0, 10, 30, 20
-    ],
-    K_end: [
-        -50,-40,-30,-20,-20,-30,-40,-50,
-        -30,-20,-10,  0,  0,-10,-20,-30,
-        -30,-10, 20, 30, 30, 20,-10,-30,
-        -30,-10, 30, 40, 40, 30,-10,-30,
-        -30,-10, 30, 40, 40, 30,-10,-30,
-        -30,-10, 20, 30, 30, 20,-10,-30,
-        -30,-30,  0,  0,  0,  0,-30,-30,
-        -50,-30,-30,-30,-30,-30,-30,-50
-    ]
+    P: [0,0,0,0,0,0,0,0,50,50,50,50,50,50,50,50,10,10,20,30,30,20,10,10,5,5,10,25,25,10,5,5,0,0,0,20,20,0,0,0,5,-5,-10,0,0,-10,-5,5,5,10,10,-20,-20,10,10,5,0,0,0,0,0,0,0,0],
+    N: [-50,-40,-30,-30,-30,-30,-40,-50,-40,-20,0,0,0,0,-20,-40,-30,0,10,15,15,10,0,-30,-30,5,15,20,20,15,5,-30,-30,0,15,20,20,15,0,-30,-30,5,10,15,15,10,5,-30,-40,-20,0,5,5,0,-20,-40,-50,-40,-30,-30,-30,-30,-40,-50],
+    B: [-20,-10,-10,-10,-10,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,10,10,10,10,0,-10,-10,5,5,10,10,5,5,-10,-10,0,10,10,10,10,0,-10,-10,10,10,10,10,10,10,-10,-10,5,0,0,0,0,5,-10,-20,-10,-10,-10,-10,-10,-10,-20],
+    R: [0,0,0,0,0,0,0,0,5,10,10,10,10,10,10,5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,0,0,0,5,5,0,0,0],
+    Q: [-20,-10,-10,-5,-5,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,5,5,5,0,-10,-5,0,5,5,5,5,0,-5,0,0,5,5,5,5,0,-5,-10,5,5,5,5,5,0,-10,-10,0,5,0,0,0,0,-10,-20,-10,-10,-5,-5,-10,-10,-20],
+    K: [-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-20,-30,-30,-40,-40,-30,-30,-20,-10,-20,-20,-20,-20,-20,-20,-10,20,20,0,0,0,0,20,20,20,30,10,0,0,10,30,20],
+    K_end: [-50,-40,-30,-20,-20,-30,-40,-50,-30,-20,-10,0,0,-10,-20,-30,-30,-10,20,30,30,20,-10,-30,-30,-10,30,40,40,30,-10,-30,-30,-10,30,40,40,30,-10,-30,-30,-10,20,30,30,20,-10,-30,-30,-30,0,0,0,0,-30,-30,-50,-30,-30,-30,-30,-30,-30,-50]
 };
 
-// Voice lines for wizard chess atmosphere
 const VOICE_LINES = {
-    capture: [
-        "Destrua-o!", "Sem piedade!", "Isso nao e xadrez de bruxo a toa!",
-        "Peca eliminada!", "Reducto!", "Estupefaca!", "Bombardia!",
-        "Essa doeu!", "Fora do tabuleiro!", "Adeus!"
-    ],
-    check: [
-        "Xeque! Proteja o Rei!", "O Rei esta em perigo!",
-        "Cuidado com o Rei!", "Xeque! Mova-se rapido!"
-    ],
-    checkmate: [
-        "Xeque-mate! O duelo acabou!", "Vitoria absoluta!",
-        "O Rei caiu! Fim de jogo!"
-    ],
-    castle: [
-        "Roque! Protecao magica ativada!", "O Rei se esconde nas Torres!",
-        "Defesa ancestral invocada!"
-    ],
-    promotion: [
-        "Transformacao magica!", "O Peao se transforma!",
-        "Metamorfose completa!"
-    ],
-    opening: [
-        "Que comece o duelo!", "As pecas estao prontas para a batalha!",
-        "O tabuleiro aguarda seu comando!"
-    ],
-    aiThinking: [
-        "Hmm, interessante...", "Deixe-me pensar...",
-        "Uma jogada astuta...", "Calculando..."
-    ]
+    capture: ["Destrua-o!","Sem piedade!","Reducto!","Estupefaca!","Bombardia!","Essa doeu!","Fora do tabuleiro!"],
+    check: ["Xeque! Proteja o Rei!","O Rei esta em perigo!","Cuidado com o Rei!"],
+    checkmate: ["Xeque-mate!","Vitoria absoluta!","O Rei caiu!"],
+    castle: ["Roque! Protecao magica!","O Rei se esconde!","Defesa ancestral invocada!"],
+    promotion: ["Transformacao magica!","O Peao se transforma!","Metamorfose completa!"],
+    opening: ["Que comece o duelo!","As pecas aguardam!","O tabuleiro esta pronto!"],
+    aiThinking: ["Hmm, interessante...","Deixe-me pensar...","Uma jogada astuta..."]
 };
 
-function randomLine(category) {
-    const lines = VOICE_LINES[category];
-    return lines[Math.floor(Math.random() * lines.length)];
-}
+function randomLine(cat) { const l = VOICE_LINES[cat]; return l[Math.floor(Math.random() * l.length)]; }
 
-// Game State
 let board = [];
 let currentTurn = 'w';
 let selectedSquare = null;
@@ -974,22 +288,15 @@ let capturedByWhite = [];
 let capturedByBlack = [];
 let lastMove = null;
 let gameOver = false;
-let boardFlipped = false;
 let aiDepth = 3;
 let promotionCallback = null;
 let moveCount = 0;
 let halfMoveClock = 0;
-
-// Castling rights
 let castlingRights = { wK: true, wQ: true, bK: true, bQ: true };
-
-// En passant target
 let enPassantTarget = null;
-
-// Position history for threefold repetition
 let positionHistory = {};
+let animating = false;
 
-// Initialize the board
 function initBoard() {
     board = [
         ['bR','bN','bB','bQ','bK','bB','bN','bR'],
@@ -1002,115 +309,67 @@ function initBoard() {
         ['wR','wN','wB','wQ','wK','wB','wN','wR']
     ];
 }
-
-function getPieceColor(piece) { return piece ? piece[0] : null; }
-function getPieceType(piece) { return piece ? piece[1] : null; }
-
-// ========================
-// MOVE GENERATION
-// ========================
-
-function isOnBoard(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+function getPieceColor(p){return p?p[0]:null}
+function getPieceType(p){return p?p[1]:null}
+function isOnBoard(r,c){return r>=0&&r<8&&c>=0&&c<8}
 
 function generatePseudoMoves(color) {
     const moves = [];
     const dir = color === 'w' ? -1 : 1;
     const startRow = color === 'w' ? 6 : 1;
-
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
             const piece = board[r][c];
             if (!piece || getPieceColor(piece) !== color) continue;
             const type = getPieceType(piece);
-
             if (type === 'P') {
-                // Forward
-                if (isOnBoard(r + dir, c) && !board[r + dir][c]) {
-                    moves.push({ from: [r, c], to: [r + dir, c] });
-                    if (r === startRow && !board[r + 2 * dir][c]) {
-                        moves.push({ from: [r, c], to: [r + 2 * dir, c] });
-                    }
+                if (isOnBoard(r+dir,c) && !board[r+dir][c]) {
+                    moves.push({from:[r,c],to:[r+dir,c]});
+                    if (r===startRow && !board[r+2*dir][c]) moves.push({from:[r,c],to:[r+2*dir,c]});
                 }
-                // Captures
-                for (const dc of [-1, 1]) {
-                    const nr = r + dir, nc = c + dc;
-                    if (isOnBoard(nr, nc)) {
-                        if (board[nr][nc] && getPieceColor(board[nr][nc]) !== color) {
-                            moves.push({ from: [r, c], to: [nr, nc] });
-                        }
-                        // En passant
-                        if (enPassantTarget && enPassantTarget[0] === nr && enPassantTarget[1] === nc) {
-                            moves.push({ from: [r, c], to: [nr, nc], enPassant: true });
-                        }
+                for (const dc of [-1,1]) {
+                    const nr=r+dir,nc=c+dc;
+                    if (isOnBoard(nr,nc)) {
+                        if (board[nr][nc] && getPieceColor(board[nr][nc])!==color) moves.push({from:[r,c],to:[nr,nc]});
+                        if (enPassantTarget && enPassantTarget[0]===nr && enPassantTarget[1]===nc) moves.push({from:[r,c],to:[nr,nc],enPassant:true});
                     }
                 }
             }
-
             if (type === 'N') {
-                for (const [dr, dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) {
-                    const nr = r + dr, nc = c + dc;
-                    if (isOnBoard(nr, nc) && getPieceColor(board[nr][nc]) !== color) {
-                        moves.push({ from: [r, c], to: [nr, nc] });
+                for (const [dr,dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) {
+                    const nr=r+dr,nc=c+dc;
+                    if (isOnBoard(nr,nc) && getPieceColor(board[nr][nc])!==color) moves.push({from:[r,c],to:[nr,nc]});
+                }
+            }
+            if (type==='B'||type==='Q') {
+                for (const [dr,dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+                    let nr=r+dr,nc=c+dc;
+                    while (isOnBoard(nr,nc)) {
+                        if (board[nr][nc]) { if (getPieceColor(board[nr][nc])!==color) moves.push({from:[r,c],to:[nr,nc]}); break; }
+                        moves.push({from:[r,c],to:[nr,nc]}); nr+=dr; nc+=dc;
                     }
                 }
             }
-
-            if (type === 'B' || type === 'Q') {
-                for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
-                    let nr = r + dr, nc = c + dc;
-                    while (isOnBoard(nr, nc)) {
-                        if (board[nr][nc]) {
-                            if (getPieceColor(board[nr][nc]) !== color) moves.push({ from: [r, c], to: [nr, nc] });
-                            break;
-                        }
-                        moves.push({ from: [r, c], to: [nr, nc] });
-                        nr += dr; nc += dc;
+            if (type==='R'||type==='Q') {
+                for (const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+                    let nr=r+dr,nc=c+dc;
+                    while (isOnBoard(nr,nc)) {
+                        if (board[nr][nc]) { if (getPieceColor(board[nr][nc])!==color) moves.push({from:[r,c],to:[nr,nc]}); break; }
+                        moves.push({from:[r,c],to:[nr,nc]}); nr+=dr; nc+=dc;
                     }
                 }
             }
-
-            if (type === 'R' || type === 'Q') {
-                for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
-                    let nr = r + dr, nc = c + dc;
-                    while (isOnBoard(nr, nc)) {
-                        if (board[nr][nc]) {
-                            if (getPieceColor(board[nr][nc]) !== color) moves.push({ from: [r, c], to: [nr, nc] });
-                            break;
-                        }
-                        moves.push({ from: [r, c], to: [nr, nc] });
-                        nr += dr; nc += dc;
-                    }
-                }
-            }
-
             if (type === 'K') {
-                for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
-                    const nr = r + dr, nc = c + dc;
-                    if (isOnBoard(nr, nc) && getPieceColor(board[nr][nc]) !== color) {
-                        moves.push({ from: [r, c], to: [nr, nc] });
-                    }
+                for (const [dr,dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+                    const nr=r+dr,nc=c+dc;
+                    if (isOnBoard(nr,nc) && getPieceColor(board[nr][nc])!==color) moves.push({from:[r,c],to:[nr,nc]});
                 }
-                // Castling
-                const row = color === 'w' ? 7 : 0;
-                if (r === row && c === 4) {
-                    // King-side
-                    if ((color === 'w' ? castlingRights.wK : castlingRights.bK) &&
-                        !board[row][5] && !board[row][6] &&
-                        board[row][7] === color + 'R' &&
-                        !isSquareAttacked(row, 4, color === 'w' ? 'b' : 'w') &&
-                        !isSquareAttacked(row, 5, color === 'w' ? 'b' : 'w') &&
-                        !isSquareAttacked(row, 6, color === 'w' ? 'b' : 'w')) {
-                        moves.push({ from: [r, c], to: [row, 6], castle: 'K' });
-                    }
-                    // Queen-side
-                    if ((color === 'w' ? castlingRights.wQ : castlingRights.bQ) &&
-                        !board[row][3] && !board[row][2] && !board[row][1] &&
-                        board[row][0] === color + 'R' &&
-                        !isSquareAttacked(row, 4, color === 'w' ? 'b' : 'w') &&
-                        !isSquareAttacked(row, 3, color === 'w' ? 'b' : 'w') &&
-                        !isSquareAttacked(row, 2, color === 'w' ? 'b' : 'w')) {
-                        moves.push({ from: [r, c], to: [row, 2], castle: 'Q' });
-                    }
+                const row = color==='w'?7:0;
+                if (r===row && c===4) {
+                    if ((color==='w'?castlingRights.wK:castlingRights.bK) && !board[row][5] && !board[row][6] && board[row][7]===color+'R' && !isSquareAttacked(row,4,color==='w'?'b':'w') && !isSquareAttacked(row,5,color==='w'?'b':'w') && !isSquareAttacked(row,6,color==='w'?'b':'w'))
+                        moves.push({from:[r,c],to:[row,6],castle:'K'});
+                    if ((color==='w'?castlingRights.wQ:castlingRights.bQ) && !board[row][3] && !board[row][2] && !board[row][1] && board[row][0]===color+'R' && !isSquareAttacked(row,4,color==='w'?'b':'w') && !isSquareAttacked(row,3,color==='w'?'b':'w') && !isSquareAttacked(row,2,color==='w'?'b':'w'))
+                        moves.push({from:[r,c],to:[row,2],castle:'Q'});
                 }
             }
         }
@@ -1118,574 +377,1035 @@ function generatePseudoMoves(color) {
     return moves;
 }
 
-function isSquareAttacked(r, c, byColor) {
-    const dir = byColor === 'w' ? -1 : 1;
-    // Pawn attacks
-    for (const dc of [-1, 1]) {
-        const pr = r - dir, pc = c + dc;
-        if (isOnBoard(pr, pc) && board[pr][pc] === byColor + 'P') return true;
-    }
-    // Knight attacks
-    for (const [dr, dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) {
-        const nr = r + dr, nc = c + dc;
-        if (isOnBoard(nr, nc) && board[nr][nc] === byColor + 'N') return true;
-    }
-    // Bishop/Queen diagonals
-    for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
-        let nr = r + dr, nc = c + dc;
-        while (isOnBoard(nr, nc)) {
-            if (board[nr][nc]) {
-                if (board[nr][nc] === byColor + 'B' || board[nr][nc] === byColor + 'Q') return true;
-                break;
-            }
-            nr += dr; nc += dc;
-        }
-    }
-    // Rook/Queen lines
-    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
-        let nr = r + dr, nc = c + dc;
-        while (isOnBoard(nr, nc)) {
-            if (board[nr][nc]) {
-                if (board[nr][nc] === byColor + 'R' || board[nr][nc] === byColor + 'Q') return true;
-                break;
-            }
-            nr += dr; nc += dc;
-        }
-    }
-    // King
-    for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
-        const nr = r + dr, nc = c + dc;
-        if (isOnBoard(nr, nc) && board[nr][nc] === byColor + 'K') return true;
-    }
+function isSquareAttacked(r,c,byColor) {
+    const dir=byColor==='w'?-1:1;
+    for (const dc of [-1,1]) { const pr=r-dir,pc=c+dc; if (isOnBoard(pr,pc)&&board[pr][pc]===byColor+'P') return true; }
+    for (const [dr,dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) { const nr=r+dr,nc=c+dc; if (isOnBoard(nr,nc)&&board[nr][nc]===byColor+'N') return true; }
+    for (const [dr,dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) { let nr=r+dr,nc=c+dc; while(isOnBoard(nr,nc)){if(board[nr][nc]){if(board[nr][nc]===byColor+'B'||board[nr][nc]===byColor+'Q')return true;break;}nr+=dr;nc+=dc;}}
+    for (const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]) { let nr=r+dr,nc=c+dc; while(isOnBoard(nr,nc)){if(board[nr][nc]){if(board[nr][nc]===byColor+'R'||board[nr][nc]===byColor+'Q')return true;break;}nr+=dr;nc+=dc;}}
+    for (const [dr,dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) { const nr=r+dr,nc=c+dc; if(isOnBoard(nr,nc)&&board[nr][nc]===byColor+'K')return true; }
     return false;
 }
 
-function findKing(color) {
-    for (let r = 0; r < 8; r++)
-        for (let c = 0; c < 8; c++)
-            if (board[r][c] === color + 'K') return [r, c];
-    return null;
-}
-
-function isInCheck(color) {
-    const king = findKing(color);
-    if (!king) return false;
-    return isSquareAttacked(king[0], king[1], color === 'w' ? 'b' : 'w');
-}
+function findKing(color){for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(board[r][c]===color+'K')return[r,c];return null;}
+function isInCheck(color){const k=findKing(color);if(!k)return false;return isSquareAttacked(k[0],k[1],color==='w'?'b':'w');}
 
 function makeMove(move) {
-    const { from, to } = move;
-    const piece = board[from[0]][from[1]];
-    const captured = board[to[0]][to[1]];
-    const state = {
-        piece, captured, from, to,
-        castlingRights: { ...castlingRights },
-        enPassantTarget: enPassantTarget ? [...enPassantTarget] : null,
-        halfMoveClock,
-        castle: move.castle,
-        enPassant: move.enPassant,
-        promotion: move.promotion,
-        enPassantCaptured: null
-    };
-
-    board[to[0]][to[1]] = piece;
-    board[from[0]][from[1]] = null;
-
-    // En passant capture
-    if (move.enPassant) {
-        const epRow = from[0];
-        state.enPassantCaptured = board[epRow][to[1]];
-        board[epRow][to[1]] = null;
-    }
-
-    // Castling
-    if (move.castle) {
-        const row = from[0];
-        if (move.castle === 'K') {
-            board[row][5] = board[row][7];
-            board[row][7] = null;
-        } else {
-            board[row][3] = board[row][0];
-            board[row][0] = null;
-        }
-    }
-
-    // Promotion
-    if (move.promotion) {
-        board[to[0]][to[1]] = getPieceColor(piece) + move.promotion;
-    }
-
-    // Update en passant target
-    enPassantTarget = null;
-    if (getPieceType(piece) === 'P' && Math.abs(to[0] - from[0]) === 2) {
-        enPassantTarget = [(from[0] + to[0]) / 2, from[1]];
-    }
-
-    // Update castling rights
-    if (piece === 'wK') { castlingRights.wK = false; castlingRights.wQ = false; }
-    if (piece === 'bK') { castlingRights.bK = false; castlingRights.bQ = false; }
-    if (from[0] === 7 && from[1] === 0) castlingRights.wQ = false;
-    if (from[0] === 7 && from[1] === 7) castlingRights.wK = false;
-    if (from[0] === 0 && from[1] === 0) castlingRights.bQ = false;
-    if (from[0] === 0 && from[1] === 7) castlingRights.bK = false;
-    if (to[0] === 7 && to[1] === 0) castlingRights.wQ = false;
-    if (to[0] === 7 && to[1] === 7) castlingRights.wK = false;
-    if (to[0] === 0 && to[1] === 0) castlingRights.bQ = false;
-    if (to[0] === 0 && to[1] === 7) castlingRights.bK = false;
-
-    // Half-move clock
-    if (getPieceType(piece) === 'P' || captured || move.enPassant) {
-        halfMoveClock = 0;
-    } else {
-        halfMoveClock++;
-    }
-
+    const {from,to}=move; const piece=board[from[0]][from[1]]; const captured=board[to[0]][to[1]];
+    const state={piece,captured,from,to,castlingRights:{...castlingRights},enPassantTarget:enPassantTarget?[...enPassantTarget]:null,halfMoveClock,castle:move.castle,enPassant:move.enPassant,promotion:move.promotion,enPassantCaptured:null};
+    board[to[0]][to[1]]=piece; board[from[0]][from[1]]=null;
+    if(move.enPassant){const epRow=from[0];state.enPassantCaptured=board[epRow][to[1]];board[epRow][to[1]]=null;}
+    if(move.castle){const row=from[0];if(move.castle==='K'){board[row][5]=board[row][7];board[row][7]=null;}else{board[row][3]=board[row][0];board[row][0]=null;}}
+    if(move.promotion)board[to[0]][to[1]]=getPieceColor(piece)+move.promotion;
+    enPassantTarget=null;
+    if(getPieceType(piece)==='P'&&Math.abs(to[0]-from[0])===2)enPassantTarget=[(from[0]+to[0])/2,from[1]];
+    if(piece==='wK'){castlingRights.wK=false;castlingRights.wQ=false;}
+    if(piece==='bK'){castlingRights.bK=false;castlingRights.bQ=false;}
+    if(from[0]===7&&from[1]===0)castlingRights.wQ=false;if(from[0]===7&&from[1]===7)castlingRights.wK=false;
+    if(from[0]===0&&from[1]===0)castlingRights.bQ=false;if(from[0]===0&&from[1]===7)castlingRights.bK=false;
+    if(to[0]===7&&to[1]===0)castlingRights.wQ=false;if(to[0]===7&&to[1]===7)castlingRights.wK=false;
+    if(to[0]===0&&to[1]===0)castlingRights.bQ=false;if(to[0]===0&&to[1]===7)castlingRights.bK=false;
+    if(getPieceType(piece)==='P'||captured||move.enPassant)halfMoveClock=0;else halfMoveClock++;
     return state;
 }
 
 function unmakeMove(state) {
-    const { piece, captured, from, to, enPassant, castle, enPassantCaptured, promotion } = state;
-
-    board[from[0]][from[1]] = piece;
-    board[to[0]][to[1]] = captured;
-
-    if (enPassant) {
-        board[from[0]][to[1]] = enPassantCaptured;
-    }
-
-    if (castle) {
-        const row = from[0];
-        if (castle === 'K') {
-            board[row][7] = board[row][5];
-            board[row][5] = null;
-        } else {
-            board[row][0] = board[row][3];
-            board[row][3] = null;
-        }
-    }
-
-    castlingRights.wK = state.castlingRights.wK;
-    castlingRights.wQ = state.castlingRights.wQ;
-    castlingRights.bK = state.castlingRights.bK;
-    castlingRights.bQ = state.castlingRights.bQ;
-    enPassantTarget = state.enPassantTarget;
-    halfMoveClock = state.halfMoveClock;
+    const{piece,captured,from,to,enPassant,castle,enPassantCaptured}=state;
+    board[from[0]][from[1]]=piece;board[to[0]][to[1]]=captured;
+    if(enPassant)board[from[0]][to[1]]=enPassantCaptured;
+    if(castle){const row=from[0];if(castle==='K'){board[row][7]=board[row][5];board[row][5]=null;}else{board[row][0]=board[row][3];board[row][3]=null;}}
+    castlingRights.wK=state.castlingRights.wK;castlingRights.wQ=state.castlingRights.wQ;
+    castlingRights.bK=state.castlingRights.bK;castlingRights.bQ=state.castlingRights.bQ;
+    enPassantTarget=state.enPassantTarget;halfMoveClock=state.halfMoveClock;
 }
 
-function generateLegalMoves(color) {
-    const pseudoMoves = generatePseudoMoves(color);
-    const legalMoves = [];
-    for (const move of pseudoMoves) {
-        const state = makeMove(move);
-        if (!isInCheck(color)) {
-            legalMoves.push(move);
-        }
-        unmakeMove(state);
-    }
-    return legalMoves;
-}
-
-// ========================
-// AI ENGINE (Minimax + Alpha-Beta)
-// ========================
+function generateLegalMoves(color){const pm=generatePseudoMoves(color);const lm=[];for(const m of pm){const s=makeMove(m);if(!isInCheck(color))lm.push(m);unmakeMove(s);}return lm;}
 
 function evaluate() {
-    let score = 0;
-    let whiteMaterial = 0, blackMaterial = 0;
+    let score=0,wm=0,bm=0;
+    for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=board[r][c];if(!p)continue;const col=getPieceColor(p),t=getPieceType(p),v=PIECES[t].value,idx=col==='w'?r*8+c:(7-r)*8+c;
+    if(col==='w')wm+=v;else bm+=v;let pos=0;if(t==='K'){const end=(wm+bm-20000)<2600;pos=(end?PST.K_end:PST.K)[idx];}else pos=PST[t][idx];if(col==='w')score+=v+pos;else score-=v+pos;}
+    score+=(generatePseudoMoves('w').length-generatePseudoMoves('b').length)*5;return score;
+}
+
+function orderMoves(moves){return moves.sort((a,b)=>{let sa=0,sb=0;const ca=board[a.to[0]][a.to[1]],cb=board[b.to[0]][b.to[1]];if(ca)sa+=PIECES[getPieceType(ca)].value*10-PIECES[getPieceType(board[a.from[0]][a.from[1]])].value;if(cb)sb+=PIECES[getPieceType(cb)].value*10-PIECES[getPieceType(board[b.from[0]][b.from[1]])].value;if(a.promotion)sa+=800;if(b.promotion)sb+=800;return sb-sa;});}
+
+function minimax(depth,alpha,beta,isMax) {
+    if(depth===0)return evaluate();
+    const color=isMax?'w':'b';let moves=generateLegalMoves(color);
+    if(moves.length===0){if(isInCheck(color))return isMax?-99999+(aiDepth-depth):99999-(aiDepth-depth);return 0;}
+    moves=orderMoves(moves);
+    if(isMax){let mx=-Infinity;for(const m of moves){if(getPieceType(board[m.from[0]][m.from[1]])==='P'&&(m.to[0]===0||m.to[0]===7)){for(const pr of['Q','R','B','N']){m.promotion=pr;const s=makeMove(m);const ev=minimax(depth-1,alpha,beta,false);unmakeMove(s);mx=Math.max(mx,ev);alpha=Math.max(alpha,ev);if(beta<=alpha)break;}m.promotion=undefined;}else{const s=makeMove(m);const ev=minimax(depth-1,alpha,beta,false);unmakeMove(s);mx=Math.max(mx,ev);alpha=Math.max(alpha,ev);}if(beta<=alpha)break;}return mx;}
+    else{let mn=Infinity;for(const m of moves){if(getPieceType(board[m.from[0]][m.from[1]])==='P'&&(m.to[0]===0||m.to[0]===7)){for(const pr of['Q','R','B','N']){m.promotion=pr;const s=makeMove(m);const ev=minimax(depth-1,alpha,beta,true);unmakeMove(s);mn=Math.min(mn,ev);beta=Math.min(beta,ev);if(beta<=alpha)break;}m.promotion=undefined;}else{const s=makeMove(m);const ev=minimax(depth-1,alpha,beta,true);unmakeMove(s);mn=Math.min(mn,ev);beta=Math.min(beta,ev);}if(beta<=alpha)break;}return mn;}
+}
+
+function findBestMove(){let moves=generateLegalMoves('b');if(moves.length===0)return null;moves=orderMoves(moves);let best=null,bestEval=Infinity;for(const m of moves){if(getPieceType(board[m.from[0]][m.from[1]])==='P'&&m.to[0]===7)m.promotion='Q';const s=makeMove(m);const ev=minimax(aiDepth-1,-Infinity,Infinity,true);unmakeMove(s);if(ev<bestEval){bestEval=ev;best={...m};};}return best;}
+
+// ========================
+// THREE.JS 3D RENDERER
+// ========================
+
+let scene, camera, renderer, raycaster, mouse;
+let boardGroup, piecesGroup, effectsGroup;
+let piece3DMap = {}; // key: "r,c" => 3D mesh
+let highlightMeshes = [];
+let selectedHighlight = null;
+let hoveredSquare = null;
+let cameraAngle = Math.PI * 0.75;
+let cameraPitch = 0.85;
+let cameraDistance = 14;
+let targetCameraAngle = cameraAngle;
+let targetCameraPitch = cameraPitch;
+let isDragging = false;
+let lastMouseX = 0, lastMouseY = 0;
+let torchLights = [];
+let dustParticles;
+let clockTime = 0;
+
+const BOARD_SIZE = 8;
+const SQ = 1.2; // square size in 3D units
+const HALF = (BOARD_SIZE * SQ) / 2;
+
+function boardToWorld(r, c) {
+    return new THREE.Vector3(
+        (c - 3.5) * SQ,
+        0,
+        (r - 3.5) * SQ
+    );
+}
+
+function init3D() {
+    const canvas = document.getElementById('gameCanvas');
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0a0a1a, 0.025);
+
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    updateCameraPosition();
+
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.8;
+
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    // Groups
+    boardGroup = new THREE.Group();
+    piecesGroup = new THREE.Group();
+    effectsGroup = new THREE.Group();
+    scene.add(boardGroup);
+    scene.add(piecesGroup);
+    scene.add(effectsGroup);
+
+    createLighting();
+    createBoard3D();
+    createDustParticles();
+    createEnvironment();
+
+    // Events
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('click', onClick3D);
+    canvas.addEventListener('wheel', onWheel);
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    canvas.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('resize', onResize);
+
+    animate3D();
+}
+
+function createLighting() {
+    // Ambient
+    const ambient = new THREE.AmbientLight(0x1a1020, 0.4);
+    scene.add(ambient);
+
+    // Main overhead light (like torchlight from above)
+    const mainLight = new THREE.DirectionalLight(0xffeedd, 0.6);
+    mainLight.position.set(2, 12, 2);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    mainLight.shadow.camera.near = 0.5;
+    mainLight.shadow.camera.far = 30;
+    mainLight.shadow.camera.left = -8;
+    mainLight.shadow.camera.right = 8;
+    mainLight.shadow.camera.top = 8;
+    mainLight.shadow.camera.bottom = -8;
+    mainLight.shadow.bias = -0.001;
+    scene.add(mainLight);
+
+    // Warm torch lights at corners
+    const torchPositions = [
+        [-HALF - 1.5, 3, -HALF - 1.5],
+        [HALF + 1.5, 3, -HALF - 1.5],
+        [-HALF - 1.5, 3, HALF + 1.5],
+        [HALF + 1.5, 3, HALF + 1.5]
+    ];
+    torchPositions.forEach(pos => {
+        const torch = new THREE.PointLight(0xff8833, 0.8, 15, 2);
+        torch.position.set(...pos);
+        torch.castShadow = false;
+        scene.add(torch);
+        torchLights.push(torch);
+
+        // Torch visual (small flame)
+        const flameGeo = new THREE.SphereGeometry(0.12, 8, 8);
+        const flameMat = new THREE.MeshBasicMaterial({ color: 0xff6622 });
+        const flame = new THREE.Mesh(flameGeo, flameMat);
+        flame.position.set(...pos);
+        scene.add(flame);
+
+        // Torch post
+        const postGeo = new THREE.CylinderGeometry(0.06, 0.08, 3, 6);
+        const postMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 0.9 });
+        const post = new THREE.Mesh(postGeo, postMat);
+        post.position.set(pos[0], 1.5, pos[2]);
+        scene.add(post);
+    });
+
+    // Subtle blue fill light from below
+    const fillLight = new THREE.HemisphereLight(0x1a1a3a, 0x0a0a0f, 0.3);
+    scene.add(fillLight);
+}
+
+function createBoard3D() {
+    // Board base (dark wood frame)
+    const baseGeo = new THREE.BoxGeometry(BOARD_SIZE * SQ + 0.8, 0.3, BOARD_SIZE * SQ + 0.8);
+    const baseMat = new THREE.MeshStandardMaterial({
+        color: 0x2a1a0e,
+        roughness: 0.6,
+        metalness: 0.1
+    });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.y = -0.2;
+    base.receiveShadow = true;
+    boardGroup.add(base);
+
+    // Gold trim
+    const trimGeo = new THREE.BoxGeometry(BOARD_SIZE * SQ + 0.85, 0.05, BOARD_SIZE * SQ + 0.85);
+    const trimMat = new THREE.MeshStandardMaterial({
+        color: 0xd4af37,
+        roughness: 0.3,
+        metalness: 0.8
+    });
+    const trim = new THREE.Mesh(trimGeo, trimMat);
+    trim.position.y = -0.03;
+    boardGroup.add(trim);
+
+    // Squares
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const isLight = (r + c) % 2 === 0;
+            const geo = new THREE.BoxGeometry(SQ - 0.02, 0.08, SQ - 0.02);
+            const mat = new THREE.MeshStandardMaterial({
+                color: isLight ? 0xc8b590 : 0x5c3a21,
+                roughness: isLight ? 0.4 : 0.5,
+                metalness: 0.05
+            });
+            const sq = new THREE.Mesh(geo, mat);
+            const pos = boardToWorld(r, c);
+            sq.position.set(pos.x, 0, pos.z);
+            sq.receiveShadow = true;
+            sq.userData = { row: r, col: c, isSquare: true };
+            boardGroup.add(sq);
+        }
+    }
+
+    // Rank/file labels carved into the frame
+    const labelColor = 0xd4af37;
+    const files = 'abcdefgh';
+    for (let i = 0; i < 8; i++) {
+        // We skip text labels for simplicity in 3D - the board orientation is clear from the pieces
+    }
+}
+
+function createEnvironment() {
+    // Dark stone floor
+    const floorGeo = new THREE.PlaneGeometry(60, 60);
+    const floorMat = new THREE.MeshStandardMaterial({
+        color: 0x0a0a12,
+        roughness: 0.95,
+        metalness: 0
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.35;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Stone pillars in background
+    for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const dist = 18;
+        const pillarGeo = new THREE.CylinderGeometry(0.5, 0.6, 12, 8);
+        const pillarMat = new THREE.MeshStandardMaterial({
+            color: 0x1a1a24,
+            roughness: 0.9,
+            metalness: 0
+        });
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(Math.cos(angle) * dist, 5.5, Math.sin(angle) * dist);
+        pillar.castShadow = true;
+        scene.add(pillar);
+    }
+}
+
+function createDustParticles() {
+    const count = 200;
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 20;
+        positions[i * 3 + 1] = Math.random() * 8;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
+        sizes[i] = Math.random() * 3 + 1;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+    const mat = new THREE.PointsMaterial({
+        color: 0xd4af37,
+        size: 0.05,
+        transparent: true,
+        opacity: 0.3,
+        sizeAttenuation: true
+    });
+    dustParticles = new THREE.Points(geo, mat);
+    scene.add(dustParticles);
+}
+
+// ========================
+// 3D PIECE CREATION
+// ========================
+
+function createPiece3D(pieceCode) {
+    const color = getPieceColor(pieceCode);
+    const type = getPieceType(pieceCode);
+    const group = new THREE.Group();
+
+    const isWhite = color === 'w';
+    const mainColor = isWhite ? 0xe8dcc8 : 0x1a1a1a;
+    const accentColor = isWhite ? 0xf5e6a3 : 0x333333;
+    const matParams = {
+        color: mainColor,
+        roughness: isWhite ? 0.3 : 0.4,
+        metalness: isWhite ? 0.1 : 0.15,
+    };
+
+    const mat = new THREE.MeshStandardMaterial(matParams);
+    const accentMat = new THREE.MeshStandardMaterial({
+        color: accentColor,
+        roughness: 0.25,
+        metalness: 0.3
+    });
+
+    let height = 0;
+    switch(type) {
+        case 'P': // Pawn - small rounded piece
+            height = 0.7;
+            const pBase = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 0.15, 16), mat);
+            pBase.position.y = 0.075;
+            group.add(pBase);
+            const pBody = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.22, 0.4, 16), mat);
+            pBody.position.y = 0.35;
+            group.add(pBody);
+            const pHead = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12), mat);
+            pHead.position.y = 0.65;
+            group.add(pHead);
+            break;
+
+        case 'R': // Rook - tower with crenellations
+            height = 0.9;
+            const rBase2 = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.15, 16), mat);
+            rBase2.position.y = 0.075;
+            group.add(rBase2);
+            const rBody2 = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.5, 16), mat);
+            rBody2.position.y = 0.4;
+            group.add(rBody2);
+            const rTop = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.2, 16), mat);
+            rTop.position.y = 0.75;
+            group.add(rTop);
+            // Crenellations
+            for (let i = 0; i < 4; i++) {
+                const cren = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.1), mat);
+                const a = (i / 4) * Math.PI * 2;
+                cren.position.set(Math.cos(a) * 0.18, 0.9, Math.sin(a) * 0.18);
+                group.add(cren);
+            }
+            break;
+
+        case 'N': // Knight - with horse head shape
+            height = 0.95;
+            const nBase2 = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.32, 0.15, 16), mat);
+            nBase2.position.y = 0.075;
+            group.add(nBase2);
+            const nBody2 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.24, 0.35, 16), mat);
+            nBody2.position.y = 0.325;
+            group.add(nBody2);
+            // Neck
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.35, 12), mat);
+            neck.position.set(0, 0.65, -0.05);
+            neck.rotation.x = 0.2;
+            group.add(neck);
+            // Head
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.2, 0.3), mat);
+            head.position.set(0, 0.85, -0.1);
+            head.rotation.x = 0.4;
+            group.add(head);
+            // Ear
+            const ear = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.12, 4), mat);
+            ear.position.set(0, 0.97, -0.05);
+            group.add(ear);
+            break;
+
+        case 'B': // Bishop - with mitre
+            height = 1.0;
+            const bBase2 = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.32, 0.15, 16), mat);
+            bBase2.position.y = 0.075;
+            group.add(bBase2);
+            const bBody2 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.23, 0.5, 16), mat);
+            bBody2.position.y = 0.4;
+            group.add(bBody2);
+            // Mitre
+            const mitre = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.6), mat);
+            mitre.position.y = 0.8;
+            group.add(mitre);
+            // Top point
+            const bPoint = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), accentMat);
+            bPoint.position.y = 1.0;
+            group.add(bPoint);
+            // Slit
+            const slit = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.15, 0.2), new THREE.MeshStandardMaterial({color: isWhite ? 0x888888 : 0x444444}));
+            slit.position.set(0, 0.82, 0.05);
+            group.add(slit);
+            break;
+
+        case 'Q': // Queen - tall with crown
+            height = 1.2;
+            const qBase2 = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.15, 16), mat);
+            qBase2.position.y = 0.075;
+            group.add(qBase2);
+            const qBody2 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.26, 0.6, 16), mat);
+            qBody2.position.y = 0.45;
+            group.add(qBody2);
+            const qNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.12, 0.15, 16), mat);
+            qNeck.position.y = 0.825;
+            group.add(qNeck);
+            // Crown points
+            for (let i = 0; i < 6; i++) {
+                const cp = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.18, 4), accentMat);
+                const a = (i / 6) * Math.PI * 2;
+                cp.position.set(Math.cos(a) * 0.12, 1.05, Math.sin(a) * 0.12);
+                group.add(cp);
+            }
+            // Crown ball on top
+            const qBall = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), accentMat);
+            qBall.position.y = 1.18;
+            group.add(qBall);
+            break;
+
+        case 'K': // King - tallest with cross
+            height = 1.3;
+            const kBase2 = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.15, 16), mat);
+            kBase2.position.y = 0.075;
+            group.add(kBase2);
+            const kBody2 = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.27, 0.65, 16), mat);
+            kBody2.position.y = 0.475;
+            group.add(kBody2);
+            const kNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.15, 16), mat);
+            kNeck.position.y = 0.875;
+            group.add(kNeck);
+            // Crown base ring
+            const kRing = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.03, 8, 16), accentMat);
+            kRing.position.y = 0.98;
+            kRing.rotation.x = Math.PI / 2;
+            group.add(kRing);
+            // Cross
+            const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.25, 0.05), accentMat);
+            crossV.position.y = 1.15;
+            group.add(crossV);
+            const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, 0.05), accentMat);
+            crossH.position.y = 1.2;
+            group.add(crossH);
+            break;
+    }
+
+    // Enable shadows on all children
+    group.traverse(child => {
+        if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    });
+
+    group.userData.pieceCode = pieceCode;
+    group.userData.height = height;
+    return group;
+}
+
+function rebuildPieces3D() {
+    // Remove old pieces
+    while (piecesGroup.children.length > 0) {
+        const child = piecesGroup.children[0];
+        piecesGroup.remove(child);
+        child.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+    }
+    piece3DMap = {};
 
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
             const piece = board[r][c];
-            if (!piece) continue;
-            const color = getPieceColor(piece);
-            const type = getPieceType(piece);
-            const value = PIECES[type].value;
-            const pstIndex = color === 'w' ? r * 8 + c : (7 - r) * 8 + c;
-
-            if (color === 'w') {
-                whiteMaterial += value;
-            } else {
-                blackMaterial += value;
-            }
-
-            let positional = 0;
-            if (type === 'K') {
-                const isEndgame = (whiteMaterial + blackMaterial - 20000) < 2600;
-                positional = (isEndgame ? PST.K_end : PST.K)[pstIndex];
-            } else {
-                positional = PST[type][pstIndex];
-            }
-
-            if (color === 'w') {
-                score += value + positional;
-            } else {
-                score -= value + positional;
-            }
-        }
-    }
-
-    // Mobility bonus
-    const whiteMoves = generatePseudoMoves('w').length;
-    const blackMoves = generatePseudoMoves('b').length;
-    score += (whiteMoves - blackMoves) * 5;
-
-    return score;
-}
-
-function orderMoves(moves) {
-    return moves.sort((a, b) => {
-        let scoreA = 0, scoreB = 0;
-        const capturedA = board[a.to[0]][a.to[1]];
-        const capturedB = board[b.to[0]][b.to[1]];
-        if (capturedA) scoreA += PIECES[getPieceType(capturedA)].value * 10 - PIECES[getPieceType(board[a.from[0]][a.from[1]])].value;
-        if (capturedB) scoreB += PIECES[getPieceType(capturedB)].value * 10 - PIECES[getPieceType(board[b.from[0]][b.from[1]])].value;
-        if (a.promotion) scoreA += 800;
-        if (b.promotion) scoreB += 800;
-        return scoreB - scoreA;
-    });
-}
-
-function minimax(depth, alpha, beta, isMaximizing) {
-    if (depth === 0) return evaluate();
-
-    const color = isMaximizing ? 'w' : 'b';
-    let moves = generateLegalMoves(color);
-
-    if (moves.length === 0) {
-        if (isInCheck(color)) return isMaximizing ? -99999 + (aiDepth - depth) : 99999 - (aiDepth - depth);
-        return 0; // Stalemate
-    }
-
-    moves = orderMoves(moves);
-
-    if (isMaximizing) {
-        let maxEval = -Infinity;
-        for (const move of moves) {
-            // Handle promotions
-            if (getPieceType(board[move.from[0]][move.from[1]]) === 'P' && (move.to[0] === 0 || move.to[0] === 7)) {
-                for (const promo of ['Q', 'R', 'B', 'N']) {
-                    move.promotion = promo;
-                    const state = makeMove(move);
-                    const evalScore = minimax(depth - 1, alpha, beta, false);
-                    unmakeMove(state);
-                    maxEval = Math.max(maxEval, evalScore);
-                    alpha = Math.max(alpha, evalScore);
-                    if (beta <= alpha) break;
-                }
-                move.promotion = undefined;
-            } else {
-                const state = makeMove(move);
-                const evalScore = minimax(depth - 1, alpha, beta, false);
-                unmakeMove(state);
-                maxEval = Math.max(maxEval, evalScore);
-                alpha = Math.max(alpha, evalScore);
-            }
-            if (beta <= alpha) break;
-        }
-        return maxEval;
-    } else {
-        let minEval = Infinity;
-        for (const move of moves) {
-            if (getPieceType(board[move.from[0]][move.from[1]]) === 'P' && (move.to[0] === 0 || move.to[0] === 7)) {
-                for (const promo of ['Q', 'R', 'B', 'N']) {
-                    move.promotion = promo;
-                    const state = makeMove(move);
-                    const evalScore = minimax(depth - 1, alpha, beta, true);
-                    unmakeMove(state);
-                    minEval = Math.min(minEval, evalScore);
-                    beta = Math.min(beta, evalScore);
-                    if (beta <= alpha) break;
-                }
-                move.promotion = undefined;
-            } else {
-                const state = makeMove(move);
-                const evalScore = minimax(depth - 1, alpha, beta, true);
-                unmakeMove(state);
-                minEval = Math.min(minEval, evalScore);
-                beta = Math.min(beta, evalScore);
-            }
-            if (beta <= alpha) break;
-        }
-        return minEval;
-    }
-}
-
-function findBestMove() {
-    let moves = generateLegalMoves('b');
-    if (moves.length === 0) return null;
-
-    moves = orderMoves(moves);
-    let bestMove = null;
-    let bestEval = Infinity;
-
-    for (const move of moves) {
-        if (getPieceType(board[move.from[0]][move.from[1]]) === 'P' && move.to[0] === 7) {
-            // AI promotion: always queen
-            move.promotion = 'Q';
-        }
-        const state = makeMove(move);
-        const evalScore = minimax(aiDepth - 1, -Infinity, Infinity, true);
-        unmakeMove(state);
-
-        if (evalScore < bestEval) {
-            bestEval = evalScore;
-            bestMove = { ...move };
-        }
-    }
-    return bestMove;
-}
-
-// ========================
-// RENDERING
-// ========================
-
-function createBoardLabels() {
-    const files = ['a','b','c','d','e','f','g','h'];
-    const topFiles = document.getElementById('topFiles');
-    const bottomFiles = document.getElementById('bottomFiles');
-    const leftRanks = document.getElementById('leftRanks');
-    const rightRanks = document.getElementById('rightRanks');
-
-    topFiles.innerHTML = '';
-    bottomFiles.innerHTML = '';
-    leftRanks.innerHTML = '';
-    rightRanks.innerHTML = '';
-
-    const fileOrder = boardFlipped ? [...files].reverse() : files;
-    const rankOrder = boardFlipped ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1];
-
-    fileOrder.forEach(f => {
-        topFiles.innerHTML += `<div class="board-label">${f}</div>`;
-        bottomFiles.innerHTML += `<div class="board-label">${f}</div>`;
-    });
-
-    rankOrder.forEach(r => {
-        leftRanks.innerHTML += `<div class="board-label">${r}</div>`;
-        rightRanks.innerHTML += `<div class="board-label">${r}</div>`;
-    });
-}
-
-function renderBoard() {
-    const boardEl = document.getElementById('chessboard');
-    boardEl.innerHTML = '';
-
-    const inCheck = isInCheck(currentTurn);
-    const kingPos = findKing(currentTurn);
-
-    for (let viewR = 0; viewR < 8; viewR++) {
-        for (let viewC = 0; viewC < 8; viewC++) {
-            const r = boardFlipped ? 7 - viewR : viewR;
-            const c = boardFlipped ? 7 - viewC : viewC;
-
-            const square = document.createElement('div');
-            const isLight = (r + c) % 2 === 0;
-            square.className = `square ${isLight ? 'light' : 'dark'}`;
-            square.dataset.row = r;
-            square.dataset.col = c;
-
-            // Last move highlight
-            if (lastMove && (
-                (lastMove.from[0] === r && lastMove.from[1] === c) ||
-                (lastMove.to[0] === r && lastMove.to[1] === c)
-            )) {
-                square.classList.add('last-move');
-            }
-
-            // Check highlight
-            if (inCheck && kingPos && kingPos[0] === r && kingPos[1] === c) {
-                square.classList.add('check');
-            }
-
-            // Selected
-            if (selectedSquare && selectedSquare[0] === r && selectedSquare[1] === c) {
-                square.classList.add('selected');
-            }
-
-            // Valid moves
-            const isValidMove = validMoves.some(m => m.to[0] === r && m.to[1] === c);
-            if (isValidMove) {
-                if (board[r][c]) {
-                    square.classList.add('valid-capture');
-                } else if (enPassantTarget && validMoves.some(m => m.to[0] === r && m.to[1] === c && m.enPassant)) {
-                    square.classList.add('valid-capture');
-                } else {
-                    square.classList.add('valid-move');
-                }
-            }
-
-            // Piece
-            const piece = board[r][c];
             if (piece) {
-                const pieceEl = document.createElement('span');
-                const color = getPieceColor(piece);
-                const type = getPieceType(piece);
-                pieceEl.className = `piece ${color === 'w' ? 'white-piece' : 'black-piece'}`;
-                pieceEl.textContent = PIECES[type].symbol[color];
-                square.appendChild(pieceEl);
+                const mesh = createPiece3D(piece);
+                const pos = boardToWorld(r, c);
+                mesh.position.set(pos.x, 0.04, pos.z);
+                mesh.userData.row = r;
+                mesh.userData.col = c;
+                piecesGroup.add(mesh);
+                piece3DMap[r + ',' + c] = mesh;
             }
-
-            square.addEventListener('click', () => onSquareClick(r, c));
-            boardEl.appendChild(square);
         }
     }
-}
-
-function updatePlayerIndicators() {
-    document.getElementById('whitePlayer').classList.toggle('active-player', currentTurn === 'w');
-    document.getElementById('blackPlayer').classList.toggle('active-player', currentTurn === 'b');
-}
-
-function updateCapturedPieces() {
-    const whiteCapturedEl = document.getElementById('whiteCaptured');
-    const blackCapturedEl = document.getElementById('blackCaptured');
-
-    whiteCapturedEl.innerHTML = capturedByWhite.map(p =>
-        `<span class="captured-piece">${PIECES[getPieceType(p)].symbol[getPieceColor(p)]}</span>`
-    ).join('');
-
-    blackCapturedEl.innerHTML = capturedByBlack.map(p =>
-        `<span class="captured-piece">${PIECES[getPieceType(p)].symbol[getPieceColor(p)]}</span>`
-    ).join('');
-}
-
-function addMoveToLog(move, piece, captured, isCheck, isCheckmate) {
-    const files = 'abcdefgh';
-    const ranks = '87654321';
-    const type = getPieceType(piece);
-    let notation = '';
-
-    if (move.castle) {
-        notation = move.castle === 'K' ? 'O-O' : 'O-O-O';
-    } else {
-        if (type !== 'P') notation += type;
-        if (captured || move.enPassant) {
-            if (type === 'P') notation += files[move.from[1]];
-            notation += 'x';
-        }
-        notation += files[move.to[1]] + ranks[move.to[0]];
-        if (move.promotion) notation += '=' + move.promotion;
-    }
-
-    if (isCheckmate) notation += '#';
-    else if (isCheck) notation += '+';
-
-    const logEl = document.getElementById('moveLog');
-    const color = getPieceColor(piece);
-
-    if (color === 'w') {
-        moveCount++;
-        const entry = document.createElement('div');
-        entry.className = 'move-entry';
-        entry.innerHTML = `<span>${moveCount}.</span><span>${notation}</span><span></span>`;
-        logEl.appendChild(entry);
-    } else {
-        const entries = logEl.querySelectorAll('.move-entry');
-        if (entries.length > 0) {
-            const lastEntry = entries[entries.length - 1];
-            lastEntry.querySelector('span:last-child').textContent = notation;
-        }
-    }
-
-    logEl.scrollTop = logEl.scrollHeight;
-}
-
-function setStatus(msg) {
-    document.getElementById('statusMessage').innerHTML = `<span class="message">${msg}</span>`;
 }
 
 // ========================
-// DESTRUCTION EFFECTS
+// 3D HIGHLIGHTS & EFFECTS
 // ========================
 
-function playDestructionEffect(row, col, capturedPiece) {
-    const boardEl = document.getElementById('chessboard');
-    const squareSize = boardEl.offsetWidth / 8;
-    const viewRow = boardFlipped ? 7 - row : row;
-    const viewCol = boardFlipped ? 7 - col : col;
-    const x = viewCol * squareSize + squareSize / 2;
-    const y = viewRow * squareSize + squareSize / 2;
+function clearHighlights() {
+    highlightMeshes.forEach(m => {
+        boardGroup.remove(m);
+        m.geometry.dispose();
+        m.material.dispose();
+    });
+    highlightMeshes = [];
+}
 
-    // Screen shake
-    const wrapper = document.querySelector('.board-wrapper');
-    wrapper.classList.add('screen-shake');
-    setTimeout(() => wrapper.classList.remove('screen-shake'), 400);
+function showHighlights() {
+    clearHighlights();
 
-    // Spell flash
-    const flash = document.createElement('div');
-    flash.className = 'spell-flash';
-    flash.style.setProperty('--x', x + 'px');
-    flash.style.setProperty('--y', y + 'px');
-    boardEl.appendChild(flash);
-    setTimeout(() => flash.remove(), 500);
-
-    // Debris particles
-    const colors = getPieceColor(capturedPiece) === 'w'
-        ? ['#ddd', '#bbb', '#999', '#fff']
-        : ['#333', '#555', '#222', '#444'];
-
-    for (let i = 0; i < 12; i++) {
-        const debris = document.createElement('div');
-        debris.className = 'debris';
-        const angle = (Math.PI * 2 * i) / 12 + Math.random() * 0.5;
-        const dist = 40 + Math.random() * 60;
-        debris.style.left = x + 'px';
-        debris.style.top = y + 'px';
-        debris.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
-        debris.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
-        debris.style.background = colors[Math.floor(Math.random() * colors.length)];
-        debris.style.width = (3 + Math.random() * 5) + 'px';
-        debris.style.height = debris.style.width;
-        debris.style.animation = `debrisFly ${0.4 + Math.random() * 0.4}s ease-out forwards`;
-        boardEl.appendChild(debris);
-        setTimeout(() => debris.remove(), 800);
+    // Selected square glow
+    if (selectedSquare) {
+        const pos = boardToWorld(selectedSquare[0], selectedSquare[1]);
+        const geo = new THREE.PlaneGeometry(SQ - 0.05, SQ - 0.05);
+        const mat = new THREE.MeshBasicMaterial({
+            color: 0xd4af37,
+            transparent: true,
+            opacity: 0.4,
+            side: THREE.DoubleSide
+        });
+        const hl = new THREE.Mesh(geo, mat);
+        hl.rotation.x = -Math.PI / 2;
+        hl.position.set(pos.x, 0.06, pos.z);
+        boardGroup.add(hl);
+        highlightMeshes.push(hl);
     }
 
-    // Magic sparks
-    for (let i = 0; i < 8; i++) {
-        const spark = document.createElement('div');
-        spark.className = 'spark';
+    // Last move highlight
+    if (lastMove) {
+        [lastMove.from, lastMove.to].forEach(sq => {
+            const pos = boardToWorld(sq[0], sq[1]);
+            const geo = new THREE.PlaneGeometry(SQ - 0.05, SQ - 0.05);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0xd4af37,
+                transparent: true,
+                opacity: 0.15,
+                side: THREE.DoubleSide
+            });
+            const hl = new THREE.Mesh(geo, mat);
+            hl.rotation.x = -Math.PI / 2;
+            hl.position.set(pos.x, 0.055, pos.z);
+            boardGroup.add(hl);
+            highlightMeshes.push(hl);
+        });
+    }
+
+    // Valid moves
+    validMoves.forEach(m => {
+        const pos = boardToWorld(m.to[0], m.to[1]);
+        const isCapture = board[m.to[0]][m.to[1]] || m.enPassant;
+
+        if (isCapture) {
+            // Red ring for captures
+            const geo = new THREE.RingGeometry(SQ * 0.35, SQ * 0.45, 24);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0xff3333,
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide
+            });
+            const hl = new THREE.Mesh(geo, mat);
+            hl.rotation.x = -Math.PI / 2;
+            hl.position.set(pos.x, 0.06, pos.z);
+            hl.userData = { validTarget: true, row: m.to[0], col: m.to[1] };
+            boardGroup.add(hl);
+            highlightMeshes.push(hl);
+        } else {
+            // Green dot for moves
+            const geo = new THREE.CircleGeometry(0.15, 16);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0x44bb44,
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide
+            });
+            const hl = new THREE.Mesh(geo, mat);
+            hl.rotation.x = -Math.PI / 2;
+            hl.position.set(pos.x, 0.06, pos.z);
+            hl.userData = { validTarget: true, row: m.to[0], col: m.to[1] };
+            boardGroup.add(hl);
+            highlightMeshes.push(hl);
+        }
+    });
+
+    // Check highlight
+    if (isInCheck(currentTurn)) {
+        const king = findKing(currentTurn);
+        if (king) {
+            const pos = boardToWorld(king[0], king[1]);
+            const geo = new THREE.PlaneGeometry(SQ - 0.05, SQ - 0.05);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                transparent: true,
+                opacity: 0.4,
+                side: THREE.DoubleSide
+            });
+            const hl = new THREE.Mesh(geo, mat);
+            hl.rotation.x = -Math.PI / 2;
+            hl.position.set(pos.x, 0.065, pos.z);
+            boardGroup.add(hl);
+            highlightMeshes.push(hl);
+        }
+    }
+}
+
+// ========================
+// 3D ANIMATION ENGINE
+// ========================
+
+function animateMovePiece(fromR, fromC, toR, toC, callback, isCapture) {
+    animating = true;
+    const key = fromR + ',' + fromC;
+    const mesh = piece3DMap[key];
+    if (!mesh) { animating = false; if (callback) callback(); return; }
+
+    const startPos = boardToWorld(fromR, fromC);
+    const endPos = boardToWorld(toR, toC);
+
+    const dx = endPos.x - startPos.x;
+    const dz = endPos.z - startPos.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    const arcHeight = isCapture ? 0.6 : Math.min(0.4, distance * 0.15);
+
+    const duration = isCapture ? 600 : 400;
+    const startTime = performance.now();
+
+    delete piece3DMap[key];
+
+    function step(now) {
+        const t = Math.min((now - startTime) / duration, 1);
+        // Ease in-out
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+        mesh.position.x = startPos.x + dx * ease;
+        mesh.position.z = startPos.z + dz * ease;
+        // Arc
+        mesh.position.y = 0.04 + arcHeight * Math.sin(t * Math.PI);
+
+        if (t < 1) {
+            requestAnimationFrame(step);
+        } else {
+            mesh.position.set(endPos.x, 0.04, endPos.z);
+            mesh.userData.row = toR;
+            mesh.userData.col = toC;
+            piece3DMap[toR + ',' + toC] = mesh;
+            animating = false;
+            if (callback) callback();
+        }
+    }
+    requestAnimationFrame(step);
+}
+
+function playCaptureEffect3D(r, c, capturedPiece) {
+    const pos = boardToWorld(r, c);
+    const capturedMesh = piece3DMap[r + ',' + c];
+
+    if (capturedMesh) {
+        // Dramatic destruction animation
+        delete piece3DMap[r + ',' + c];
+        const startTime = performance.now();
+        const duration = 800;
+
+        function destroyStep(now) {
+            const t = Math.min((now - startTime) / duration, 1);
+
+            // Piece shatters - rises, spins, and fades
+            capturedMesh.position.y = 0.04 + t * 2;
+            capturedMesh.rotation.x = t * Math.PI * 2;
+            capturedMesh.rotation.z = t * Math.PI * 1.5;
+            capturedMesh.scale.setScalar(1 - t);
+
+            // Make transparent
+            capturedMesh.traverse(child => {
+                if (child.material) {
+                    child.material.transparent = true;
+                    child.material.opacity = 1 - t;
+                }
+            });
+
+            if (t < 1) {
+                requestAnimationFrame(destroyStep);
+            } else {
+                piecesGroup.remove(capturedMesh);
+                capturedMesh.traverse(ch => {
+                    if (ch.geometry) ch.geometry.dispose();
+                    if (ch.material) ch.material.dispose();
+                });
+            }
+        }
+        requestAnimationFrame(destroyStep);
+    }
+
+    // Magical particles explosion
+    const particleCount = 30;
+    const particles = [];
+    for (let i = 0; i < particleCount; i++) {
+        const pGeo = new THREE.SphereGeometry(0.04, 4, 4);
+        const pColor = getPieceColor(capturedPiece) === 'w'
+            ? new THREE.Color().setHSL(0.1, 0.5, 0.7 + Math.random() * 0.3)
+            : new THREE.Color().setHSL(0.08, 0.8, 0.3 + Math.random() * 0.3);
+        const pMat = new THREE.MeshBasicMaterial({ color: pColor, transparent: true });
+        const particle = new THREE.Mesh(pGeo, pMat);
+        particle.position.set(pos.x, 0.5, pos.z);
+
         const angle = Math.random() * Math.PI * 2;
-        const dist = 30 + Math.random() * 50;
-        spark.style.left = x + 'px';
-        spark.style.top = y + 'px';
-        spark.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
-        spark.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
-        spark.style.animation = `sparkFly ${0.3 + Math.random() * 0.3}s ease-out forwards`;
-        boardEl.appendChild(spark);
-        setTimeout(() => spark.remove(), 600);
+        const speed = 1 + Math.random() * 3;
+        const upSpeed = 2 + Math.random() * 3;
+        particle.userData.velocity = {
+            x: Math.cos(angle) * speed,
+            y: upSpeed,
+            z: Math.sin(angle) * speed
+        };
+        effectsGroup.add(particle);
+        particles.push(particle);
     }
+
+    // Golden sparks
+    for (let i = 0; i < 15; i++) {
+        const sGeo = new THREE.SphereGeometry(0.025, 4, 4);
+        const sMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true });
+        const spark = new THREE.Mesh(sGeo, sMat);
+        spark.position.set(pos.x, 0.5, pos.z);
+        const angle = Math.random() * Math.PI * 2;
+        spark.userData.velocity = {
+            x: Math.cos(angle) * (2 + Math.random() * 4),
+            y: 3 + Math.random() * 4,
+            z: Math.sin(angle) * (2 + Math.random() * 4)
+        };
+        effectsGroup.add(spark);
+        particles.push(spark);
+    }
+
+    // Animate particles
+    const startTime = performance.now();
+    const pDuration = 1200;
+    function particleStep(now) {
+        const dt = 0.016;
+        const t = (now - startTime) / pDuration;
+        let alive = false;
+        particles.forEach(p => {
+            if (p.parent) {
+                p.userData.velocity.y -= 9.8 * dt;
+                p.position.x += p.userData.velocity.x * dt;
+                p.position.y += p.userData.velocity.y * dt;
+                p.position.z += p.userData.velocity.z * dt;
+                p.material.opacity = Math.max(0, 1 - t);
+                p.scale.setScalar(Math.max(0.01, 1 - t));
+
+                if (p.position.y < -0.5 || t >= 1) {
+                    effectsGroup.remove(p);
+                    p.geometry.dispose();
+                    p.material.dispose();
+                } else {
+                    alive = true;
+                }
+            }
+        });
+        if (alive) requestAnimationFrame(particleStep);
+    }
+    requestAnimationFrame(particleStep);
+
+    // Flash of light at impact
+    const flashGeo = new THREE.SphereGeometry(0.8, 16, 16);
+    const flashMat = new THREE.MeshBasicMaterial({
+        color: 0xd4af37,
+        transparent: true,
+        opacity: 0.6
+    });
+    const flash = new THREE.Mesh(flashGeo, flashMat);
+    flash.position.set(pos.x, 0.5, pos.z);
+    effectsGroup.add(flash);
+
+    const flashStart = performance.now();
+    function flashStep(now) {
+        const t = (now - flashStart) / 400;
+        if (t < 1) {
+            flash.scale.setScalar(1 + t * 2);
+            flash.material.opacity = 0.6 * (1 - t);
+            requestAnimationFrame(flashStep);
+        } else {
+            effectsGroup.remove(flash);
+            flash.geometry.dispose();
+            flash.material.dispose();
+        }
+    }
+    requestAnimationFrame(flashStep);
+
+    // Camera shake
+    shakeCamera();
 }
 
-function showVoiceBubble(message, row, col) {
-    const boardEl = document.getElementById('chessboard');
-    const squareSize = boardEl.offsetWidth / 8;
-    const viewRow = boardFlipped ? 7 - row : row;
-    const viewCol = boardFlipped ? 7 - col : col;
-
-    const bubble = document.createElement('div');
-    bubble.className = 'voice-bubble';
-    bubble.textContent = message;
-    bubble.style.left = (viewCol * squareSize + squareSize / 2) + 'px';
-    bubble.style.top = (viewRow * squareSize - 10) + 'px';
-    bubble.style.transform = 'translateX(-50%)';
-    boardEl.style.overflow = 'visible';
-    boardEl.appendChild(bubble);
-    setTimeout(() => bubble.remove(), 2800);
+let cameraShake = 0;
+function shakeCamera() {
+    cameraShake = 0.15;
 }
 
 // ========================
-// GAME LOGIC & INTERACTION
+// CAMERA CONTROLS
+// ========================
+
+function updateCameraPosition() {
+    const shakeX = cameraShake * (Math.random() - 0.5) * 2;
+    const shakeY = cameraShake * (Math.random() - 0.5) * 2;
+
+    const x = Math.cos(cameraAngle) * Math.cos(cameraPitch) * cameraDistance + shakeX;
+    const y = Math.sin(cameraPitch) * cameraDistance;
+    const z = Math.sin(cameraAngle) * Math.cos(cameraPitch) * cameraDistance + shakeY;
+
+    camera.position.set(x, y, z);
+    camera.lookAt(0, 0, 0);
+
+    cameraShake *= 0.9;
+    if (cameraShake < 0.001) cameraShake = 0;
+}
+
+function onMouseDown(e) {
+    isDragging = false;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+}
+
+function onMouseMove(e) {
+    if (e.buttons === 1 || e.buttons === 2) {
+        const dx = e.clientX - lastMouseX;
+        const dy = e.clientY - lastMouseY;
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) isDragging = true;
+        targetCameraAngle -= dx * 0.005;
+        targetCameraPitch = Math.max(0.2, Math.min(1.4, targetCameraPitch + dy * 0.005));
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+    }
+
+    // Update mouse for raycasting
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+}
+
+function onMouseUp(e) {}
+
+function onWheel(e) {
+    cameraDistance = Math.max(8, Math.min(25, cameraDistance + e.deltaY * 0.01));
+    e.preventDefault();
+}
+
+let touchStartDist = 0;
+function onTouchStart(e) {
+    if (e.touches.length === 1) {
+        lastMouseX = e.touches[0].clientX;
+        lastMouseY = e.touches[0].clientY;
+        isDragging = false;
+    } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        touchStartDist = Math.sqrt(dx * dx + dy * dy);
+    }
+    e.preventDefault();
+}
+
+function onTouchMove(e) {
+    if (e.touches.length === 1) {
+        const dx = e.touches[0].clientX - lastMouseX;
+        const dy = e.touches[0].clientY - lastMouseY;
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) isDragging = true;
+        if (isDragging) {
+            targetCameraAngle -= dx * 0.008;
+            targetCameraPitch = Math.max(0.2, Math.min(1.4, targetCameraPitch + dy * 0.008));
+        }
+        lastMouseX = e.touches[0].clientX;
+        lastMouseY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        cameraDistance = Math.max(8, Math.min(25, cameraDistance - (dist - touchStartDist) * 0.03));
+        touchStartDist = dist;
+    }
+    e.preventDefault();
+}
+
+function onTouchEnd(e) {
+    if (!isDragging && e.changedTouches.length === 1) {
+        mouse.x = (e.changedTouches[0].clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.changedTouches[0].clientY / window.innerHeight) * 2 + 1;
+        handleClick();
+    }
+}
+
+function onClick3D(e) {
+    if (isDragging) return;
+    initAudio();
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    handleClick();
+}
+
+function handleClick() {
+    if (gameOver || currentTurn !== 'w' || animating) return;
+    initAudio();
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // Check pieces first
+    const pieceIntersects = raycaster.intersectObjects(piecesGroup.children, true);
+    // Check board squares
+    const boardIntersects = raycaster.intersectObjects(boardGroup.children, true);
+
+    let clickedRow = -1, clickedCol = -1;
+
+    if (pieceIntersects.length > 0) {
+        let obj = pieceIntersects[0].object;
+        while (obj.parent && obj.parent !== piecesGroup) obj = obj.parent;
+        if (obj.userData.row !== undefined) {
+            clickedRow = obj.userData.row;
+            clickedCol = obj.userData.col;
+        }
+    }
+
+    if (clickedRow === -1 && boardIntersects.length > 0) {
+        for (const hit of boardIntersects) {
+            if (hit.object.userData.isSquare) {
+                clickedRow = hit.object.userData.row;
+                clickedCol = hit.object.userData.col;
+                break;
+            }
+        }
+    }
+
+    // Also check highlight meshes for valid move targets
+    if (clickedRow === -1) {
+        const hlIntersects = raycaster.intersectObjects(highlightMeshes, false);
+        for (const hit of hlIntersects) {
+            if (hit.object.userData.validTarget) {
+                clickedRow = hit.object.userData.row;
+                clickedCol = hit.object.userData.col;
+                break;
+            }
+        }
+    }
+
+    if (clickedRow === -1) return;
+
+    onSquareClick(clickedRow, clickedCol);
+}
+
+function onResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ========================
+// MAIN ANIMATION LOOP
+// ========================
+
+function animate3D() {
+    requestAnimationFrame(animate3D);
+    clockTime += 0.016;
+
+    // Smooth camera
+    cameraAngle += (targetCameraAngle - cameraAngle) * 0.08;
+    cameraPitch += (targetCameraPitch - cameraPitch) * 0.08;
+    updateCameraPosition();
+
+    // Torch light flicker
+    torchLights.forEach((t, i) => {
+        t.intensity = 0.7 + Math.sin(clockTime * 3 + i * 1.5) * 0.15 + Math.sin(clockTime * 7 + i) * 0.08;
+    });
+
+    // Animate dust
+    if (dustParticles) {
+        const pos = dustParticles.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+            let y = pos.getY(i);
+            y += 0.003;
+            if (y > 8) y = 0;
+            pos.setY(i, y);
+            pos.setX(i, pos.getX(i) + Math.sin(clockTime + i) * 0.001);
+        }
+        pos.needsUpdate = true;
+    }
+
+    // Pulse selected piece
+    if (selectedSquare) {
+        const key = selectedSquare[0] + ',' + selectedSquare[1];
+        const mesh = piece3DMap[key];
+        if (mesh) {
+            mesh.position.y = 0.04 + Math.sin(clockTime * 4) * 0.03;
+        }
+    }
+
+    // Pulse check king
+    if (isInCheck(currentTurn) && !gameOver) {
+        const king = findKing(currentTurn);
+        if (king) {
+            const checkHL = highlightMeshes.find(m =>
+                m.material.color && m.material.color.r > 0.9 && m.material.color.g < 0.1
+            );
+            if (checkHL) {
+                checkHL.material.opacity = 0.2 + Math.sin(clockTime * 5) * 0.2;
+            }
+        }
+    }
+
+    // Animate valid move highlights
+    highlightMeshes.forEach(m => {
+        if (m.userData.validTarget) {
+            m.material.opacity = 0.3 + Math.sin(clockTime * 3) * 0.15;
+        }
+    });
+
+    renderer.render(scene, camera);
+}
+
+// ========================
+// GAME LOGIC (3D integrated)
 // ========================
 
 function onSquareClick(r, c) {
-    if (gameOver || currentTurn !== 'w') return;
+    if (gameOver || currentTurn !== 'w' || animating) return;
 
     const piece = board[r][c];
 
     if (selectedSquare) {
         const move = validMoves.find(m => m.to[0] === r && m.to[1] === c);
         if (move) {
-            // Check for promotion
             if (getPieceType(board[selectedSquare[0]][selectedSquare[1]]) === 'P' && (r === 0 || r === 7)) {
                 showPromotionModal('w', (promo) => {
                     move.promotion = promo;
@@ -1698,15 +1418,15 @@ function onSquareClick(r, c) {
         }
     }
 
-    // Select piece
     if (piece && getPieceColor(piece) === 'w') {
         selectedSquare = [r, c];
         validMoves = generateLegalMoves('w').filter(m => m.from[0] === r && m.from[1] === c);
-        renderBoard();
+        soundSelect();
+        showHighlights();
     } else {
         selectedSquare = null;
         validMoves = [];
-        renderBoard();
+        showHighlights();
     }
 }
 
@@ -1714,37 +1434,72 @@ function executeMove(move) {
     const piece = board[move.from[0]][move.from[1]];
     const captured = board[move.to[0]][move.to[1]];
     const wasEnPassant = move.enPassant;
+    const isCapture = !!captured || wasEnPassant;
 
+    // Animate the piece moving in 3D, then apply logic
+    const fromR = move.from[0], fromC = move.from[1];
+    const toR = move.to[0], toC = move.to[1];
+
+    // If capture, play destruction effect right as piece arrives
+    if (isCapture) {
+        const capturedPiece = captured || board[fromR][move.to[1]]; // en passant
+
+        animateMovePiece(fromR, fromC, toR, toC, () => {
+            // Play capture effects
+            soundCapture();
+            if (wasEnPassant) {
+                playCaptureEffect3D(fromR, toC, capturedPiece);
+            } else {
+                playCaptureEffect3D(toR, toC, captured);
+            }
+
+            // Apply the move to the board state
+            finishExecuteMove(move, piece, captured, wasEnPassant);
+        }, true);
+    } else {
+        soundMove();
+        animateMovePiece(fromR, fromC, toR, toC, () => {
+            finishExecuteMove(move, piece, captured, wasEnPassant);
+        }, false);
+    }
+
+    // Handle castling rook animation
+    if (move.castle) {
+        soundCastle();
+        const row = fromR;
+        if (move.castle === 'K') {
+            animateMovePiece(row, 7, row, 5, null, false);
+        } else {
+            animateMovePiece(row, 0, row, 3, null, false);
+        }
+    }
+}
+
+function finishExecuteMove(move, piece, captured, wasEnPassant) {
     const state = makeMove(move);
     moveHistory.push(state);
     lastMove = move;
 
-    // Handle captures
     if (captured) {
-        if (getPieceColor(piece) === 'w') {
-            capturedByWhite.push(captured);
-        } else {
-            capturedByBlack.push(captured);
-        }
-        playDestructionEffect(move.to[0], move.to[1], captured);
-        showVoiceBubble(randomLine('capture'), move.to[0], move.to[1]);
+        if (getPieceColor(piece) === 'w') capturedByWhite.push(captured);
+        else capturedByBlack.push(captured);
     } else if (wasEnPassant) {
         const epCaptured = state.enPassantCaptured;
-        if (getPieceColor(piece) === 'w') {
-            capturedByWhite.push(epCaptured);
-        } else {
-            capturedByBlack.push(epCaptured);
-        }
-        playDestructionEffect(move.from[0], move.to[1], epCaptured);
-        showVoiceBubble(randomLine('capture'), move.from[0], move.to[1]);
+        if (getPieceColor(piece) === 'w') capturedByWhite.push(epCaptured);
+        else capturedByBlack.push(epCaptured);
     }
 
     if (move.castle) {
-        showVoiceBubble(randomLine('castle'), move.to[0], move.to[1]);
+        showVoiceText(randomLine('castle'));
+    } else if (captured || wasEnPassant) {
+        showVoiceText(randomLine('capture'));
     }
 
     if (move.promotion) {
-        showVoiceBubble(randomLine('promotion'), move.to[0], move.to[1]);
+        soundPromotion();
+        showVoiceText(randomLine('promotion'));
+        // Rebuild the promoted piece
+        rebuildPieces3D();
     }
 
     selectedSquare = null;
@@ -1758,25 +1513,26 @@ function executeMove(move) {
 
     if (opponentMoves.length === 0) {
         if (inCheck) {
+            soundCheckmate();
             endGame(getPieceColor(piece) === 'w' ? 'w' : 'b');
         } else {
             endGame('draw');
         }
-        renderBoard();
-        updatePlayerIndicators();
-        updateCapturedPieces();
+        showHighlights();
+        updateHUD();
         return;
     }
 
     if (inCheck) {
+        soundCheck();
         setStatus(randomLine('check'));
+        showVoiceText(randomLine('check'));
     } else {
         setStatus(currentTurn === 'w' ? 'Sua vez! Faca sua jogada.' : 'McGonagall esta pensando...');
     }
 
-    renderBoard();
-    updatePlayerIndicators();
-    updateCapturedPieces();
+    showHighlights();
+    updateHUD();
 
     // AI turn
     if (currentTurn === 'b' && !gameOver) {
@@ -1784,23 +1540,28 @@ function executeMove(move) {
         setTimeout(() => {
             if (gameOver) return;
             const aiMove = findBestMove();
-            if (aiMove) {
-                executeMove(aiMove);
-            }
-        }, 400);
+            if (aiMove) executeMove(aiMove);
+        }, 500);
     }
+}
+
+function showVoiceText(text) {
+    const el = document.getElementById('voiceText');
+    el.textContent = text;
+    el.classList.remove('show');
+    void el.offsetWidth; // reflow
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
 }
 
 function showPromotionModal(color, callback) {
     const modal = document.getElementById('promotionModal');
     const choices = document.getElementById('promotionChoices');
     modal.classList.add('active');
-
     const pieces = ['Q', 'R', 'B', 'N'];
-    choices.innerHTML = pieces.map(p => {
-        return `<div class="promotion-choice" data-piece="${p}">${PIECES[p].symbol[color]}</div>`;
-    }).join('');
-
+    choices.innerHTML = pieces.map(p =>
+        '<div class="promotion-choice" data-piece="' + p + '">' + PIECES[p].symbol[color] + '</div>'
+    ).join('');
     choices.querySelectorAll('.promotion-choice').forEach(el => {
         el.addEventListener('click', () => {
             modal.classList.remove('active');
@@ -1815,77 +1576,50 @@ function endGame(winner) {
     const title = document.getElementById('gameOverTitle');
     const text = document.getElementById('gameOverText');
     const quote = document.getElementById('gameOverQuote');
-
     const quotes = [
         '"Vai ser preciso coragem para enfrentar nossos inimigos, mas muito mais para enfrentar nossos amigos." - Dumbledore',
-        '"Sao as nossas escolhas que mostram o que realmente somos, muito mais do que as nossas habilidades." - Dumbledore',
-        '"A felicidade pode ser encontrada mesmo nas horas mais sombrias, se a pessoa se lembrar de acender a luz." - Dumbledore',
-        '"Nao faz bem se debrucar sobre sonhos e esquecer de viver." - Dumbledore',
-        '"E preciso muita bravura para resistir aos inimigos, mas muito mais para resistir aos amigos." - Dumbledore'
+        '"Sao as nossas escolhas que mostram o que realmente somos." - Dumbledore',
+        '"A felicidade pode ser encontrada mesmo nas horas mais sombrias." - Dumbledore',
+        '"Nao faz bem se debrucar sobre sonhos e esquecer de viver." - Dumbledore'
     ];
-
     if (winner === 'w') {
         title.textContent = 'Vitoria!';
         text.textContent = 'Voce venceu o Xadrez de Bruxo! Ron Weasley ficaria orgulhoso.';
     } else if (winner === 'b') {
         title.textContent = 'Derrota...';
-        text.textContent = 'McGonagall venceu este duelo. Tente novamente, bruxo!';
+        text.textContent = 'McGonagall venceu este duelo. Tente novamente!';
     } else {
         title.textContent = 'Empate!';
-        text.textContent = 'O duelo terminou em empate. As pecas descansam...';
+        text.textContent = 'O duelo terminou em empate.';
     }
-
     quote.textContent = quotes[Math.floor(Math.random() * quotes.length)];
-
     setTimeout(() => modal.classList.add('active'), 500);
 }
 
 function undoMove() {
-    if (gameOver || moveHistory.length < 2) return;
-
-    // Undo AI move
+    if (gameOver || moveHistory.length < 2 || animating) return;
     let state = moveHistory.pop();
     unmakeMove(state);
-    if (state.captured || state.enPassantCaptured) {
-        capturedByWhite.pop();
-    }
-
-    // Undo player move
+    if (state.captured || state.enPassantCaptured) capturedByWhite.pop();
     state = moveHistory.pop();
     unmakeMove(state);
-    if (state.captured || state.enPassantCaptured) {
-        capturedByBlack.pop();
-    }
-
+    if (state.captured || state.enPassantCaptured) capturedByBlack.pop();
     currentTurn = 'w';
     selectedSquare = null;
     validMoves = [];
-    lastMove = moveHistory.length > 0 ? {
-        from: moveHistory[moveHistory.length - 1].from,
-        to: moveHistory[moveHistory.length - 1].to
-    } : null;
-
-    // Remove last two log entries
+    lastMove = moveHistory.length > 0 ? {from: moveHistory[moveHistory.length-1].from, to: moveHistory[moveHistory.length-1].to} : null;
     const logEl = document.getElementById('moveLog');
     if (logEl.lastChild) logEl.removeChild(logEl.lastChild);
     moveCount--;
-
     setStatus('Movimento desfeito. Sua vez!');
-    renderBoard();
-    updatePlayerIndicators();
-    updateCapturedPieces();
-}
-
-function flipBoard() {
-    boardFlipped = !boardFlipped;
-    createBoardLabels();
-    renderBoard();
+    rebuildPieces3D();
+    showHighlights();
+    updateHUD();
 }
 
 function newGame() {
     document.getElementById('gameOverModal').classList.remove('active');
     document.getElementById('promotionModal').classList.remove('active');
-
     initBoard();
     currentTurn = 'w';
     selectedSquare = null;
@@ -1900,37 +1634,76 @@ function newGame() {
     castlingRights = { wK: true, wQ: true, bK: true, bQ: true };
     enPassantTarget = null;
     positionHistory = {};
-
+    animating = false;
     document.getElementById('moveLog').innerHTML = '';
     setStatus(randomLine('opening'));
-    createBoardLabels();
-    renderBoard();
+    rebuildPieces3D();
+    clearHighlights();
+    updateHUD();
+    initAudio();
+    startAmbient();
+}
+
+// ========================
+// HUD UPDATES
+// ========================
+
+function updateHUD() {
     updatePlayerIndicators();
     updateCapturedPieces();
 }
 
-// ========================
-// PARTICLES
-// ========================
+function updatePlayerIndicators() {
+    document.getElementById('whitePlayer').classList.toggle('active-player', currentTurn === 'w');
+    document.getElementById('blackPlayer').classList.toggle('active-player', currentTurn === 'b');
+}
 
-function createParticles() {
-    const container = document.getElementById('particles');
-    for (let i = 0; i < 30; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        p.style.left = Math.random() * 100 + '%';
-        p.style.animationDuration = (8 + Math.random() * 12) + 's';
-        p.style.animationDelay = Math.random() * 10 + 's';
-        p.style.width = (2 + Math.random() * 3) + 'px';
-        p.style.height = p.style.width;
-        container.appendChild(p);
+function updateCapturedPieces() {
+    document.getElementById('whiteCaptured').innerHTML = capturedByWhite.map(p =>
+        '<span class="captured-piece">' + PIECES[getPieceType(p)].symbol[getPieceColor(p)] + '</span>'
+    ).join('');
+    document.getElementById('blackCaptured').innerHTML = capturedByBlack.map(p =>
+        '<span class="captured-piece">' + PIECES[getPieceType(p)].symbol[getPieceColor(p)] + '</span>'
+    ).join('');
+}
+
+function addMoveToLog(move, piece, captured, isCheck, isCheckmate) {
+    const files = 'abcdefgh';
+    const ranks = '87654321';
+    const type = getPieceType(piece);
+    let notation = '';
+    if (move.castle) {
+        notation = move.castle === 'K' ? 'O-O' : 'O-O-O';
+    } else {
+        if (type !== 'P') notation += type;
+        if (captured) { if (type === 'P') notation += files[move.from[1]]; notation += 'x'; }
+        notation += files[move.to[1]] + ranks[move.to[0]];
+        if (move.promotion) notation += '=' + move.promotion;
     }
+    if (isCheckmate) notation += '#';
+    else if (isCheck) notation += '+';
+    const logEl = document.getElementById('moveLog');
+    const color = getPieceColor(piece);
+    if (color === 'w') {
+        moveCount++;
+        const entry = document.createElement('div');
+        entry.className = 'move-entry';
+        entry.innerHTML = '<span>' + moveCount + '.</span><span>' + notation + '</span><span></span>';
+        logEl.appendChild(entry);
+    } else {
+        const entries = logEl.querySelectorAll('.move-entry');
+        if (entries.length > 0) entries[entries.length-1].querySelector('span:last-child').textContent = notation;
+    }
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStatus(msg) {
+    document.getElementById('statusMessage').textContent = msg;
 }
 
 // ========================
-// DIFFICULTY
+// DIFFICULTY BUTTONS
 // ========================
-
 document.querySelectorAll('.diff-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
@@ -1942,10 +1715,17 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
 // ========================
 // INIT
 // ========================
+initBoard();
+init3D();
+rebuildPieces3D();
+showHighlights();
+updateHUD();
+setStatus(randomLine('opening'));
 
-createParticles();
-newGame();
+// Init audio on first interaction
+document.addEventListener('click', () => { initAudio(); startAmbient(); }, { once: true });
+document.addEventListener('touchstart', () => { initAudio(); startAmbient(); }, { once: true });
+
 </script>
-
 </body>
 </html>
