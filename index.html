@@ -178,6 +178,15 @@
             line-height: 1;
         }
 
+        /* When the cell has a cage-sum (rendered just before .notes-grid),
+           push the "1" note diagonally away from the corner so it isn't
+           covered by the sum label. */
+        table#grid td .cage-sum + .notes-grid > .note:first-child {
+            align-items: flex-end;
+            justify-content: flex-end;
+            padding: 0 2px 1px 0;
+        }
+
         /* Cell states: use background-image as a translucent overlay so
            the cage color (set inline) stays visible underneath. */
         td.highlighted {
