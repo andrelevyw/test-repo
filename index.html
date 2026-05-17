@@ -178,21 +178,23 @@
             line-height: 1;
         }
 
-        /* Cell states */
-        td.selected {
-            background-color: #bee3f8 !important;
-        }
-
+        /* Cell states: use background-image as a translucent overlay so
+           the cage color (set inline) stays visible underneath. */
         td.highlighted {
-            background-color: rgba(190, 227, 248, 0.35) !important;
+            background-image: linear-gradient(rgba(49, 130, 206, 0.1), rgba(49, 130, 206, 0.1));
         }
 
         td.same-number {
-            background-color: rgba(144, 205, 244, 0.45) !important;
+            background-image: linear-gradient(rgba(49, 130, 206, 0.22), rgba(49, 130, 206, 0.22));
         }
 
+        td.selected {
+            background-image: linear-gradient(rgba(49, 130, 206, 0.35), rgba(49, 130, 206, 0.35));
+        }
+        td.selected .cell-value.player { color: #1a365d; }
+
         td.cage-error {
-            background-color: rgba(254, 202, 202, 0.6) !important;
+            background-image: linear-gradient(rgba(229, 62, 62, 0.4), rgba(229, 62, 62, 0.4));
         }
 
         /* ===== CONTROLS ===== */
