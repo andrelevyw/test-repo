@@ -906,7 +906,10 @@
 
                     if (state.paused) {
                         // Hide all content when paused
-                        td.addEventListener('click', () => togglePause());
+                        td.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            togglePause();
+                        });
                     } else {
                         const val = state.playerGrid[r][c];
                         const notes = state.notes[r][c];
@@ -962,7 +965,10 @@
                             }
                         }
 
-                        td.addEventListener('click', () => selectCell(r, c));
+                        td.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            selectCell(r, c);
+                        });
                     }
 
                     tr.appendChild(td);
@@ -1021,7 +1027,10 @@
                             count++;
                 if (count >= 9) btn.classList.add('completed');
 
-                btn.addEventListener('click', () => enterNumber(n));
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    enterNumber(n);
+                });
                 pad.appendChild(btn);
             }
         }
