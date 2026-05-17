@@ -352,8 +352,9 @@
             header h1 { font-size: 20px; }
             .diff-btn { padding: 5px 10px; font-size: 12px; }
             .num-btn { font-size: 18px; border-radius: 8px; }
-            .action-btn { padding: 6px 10px; min-width: 54px; font-size: 10px; }
+            .action-btn { padding: 6px 6px; min-width: 0; flex: 1; font-size: 10px; }
             .action-btn .icon { font-size: 17px; }
+            .action-buttons { gap: 4px; }
             .number-pad { gap: 4px; }
         }
 
@@ -362,6 +363,8 @@
             table#grid td .cell-value { font-size: 18px; }
             table#grid td .cage-sum { font-size: 7px; }
             table#grid td .notes-grid .note { font-size: 7px; }
+            .action-btn { padding: 5px 4px; font-size: 9px; }
+            .action-btn .icon { font-size: 15px; }
         }
     </style>
 </head>
@@ -402,6 +405,9 @@
                 </button>
                 <button class="action-btn" id="btn-notes">
                     <span class="icon">✏</span> Notes
+                </button>
+                <button class="action-btn" id="btn-auto-notes" title="Auto-fill candidates">
+                    <span class="icon">⚡</span> Auto
                 </button>
                 <button class="action-btn" id="btn-hint">
                     <span class="icon">💡</span> Hint
@@ -771,6 +777,10 @@
             } else if (action.type === 'note') {
                 state.notes[action.r][action.c] = action.prev;
                 state.playerGrid[action.r][action.c] = action.value;
+            } else if (action.type === 'autoNotes') {
+                for (const { r, c, prev } of action.changes) {
+                    state.notes[r][c] = prev;
+                }
             }
 
             renderGrid();
@@ -806,6 +816,46 @@
 
             renderGrid();
             renderNumberPad();
+        }
+
+        function isValidCandidate(r, c, num) {
+            for (let i = 0; i < 9; i++) {
+                if (state.playerGrid[r][i] === num) return false;
+                if (state.playerGrid[i][c] === num) return false;
+            }
+            const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+            for (let dr = 0; dr < 3; dr++)
+                for (let dc = 0; dc < 3; dc++)
+                    if (state.playerGrid[br + dr][bc + dc] === num) return false;
+            const cage = state.cages[state.cageMap[r][c]];
+            for (const [cr, cc] of cage.cells) {
+                if (state.playerGrid[cr][cc] === num) return false;
+            }
+            return true;
+        }
+
+        function autoFillNotes() {
+            if (state.completed || state.paused) return;
+            startTimer();
+            const changes = [];
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    if (state.playerGrid[r][c] !== 0) continue;
+                    const prev = new Set(state.notes[r][c]);
+                    const next = new Set();
+                    for (let n = 1; n <= 9; n++) {
+                        if (isValidCandidate(r, c, n)) next.add(n);
+                    }
+                    if (prev.size !== next.size || [...prev].some(x => !next.has(x))) {
+                        changes.push({ r, c, prev });
+                        state.notes[r][c] = next;
+                    }
+                }
+            }
+            if (changes.length) {
+                state.history.push({ type: 'autoNotes', changes });
+            }
+            renderGrid();
         }
 
         function removeNotesForPlacement(r, c, num) {
@@ -1071,6 +1121,7 @@
                 state.notesMode = !state.notesMode;
                 document.getElementById('btn-notes').classList.toggle('active', state.notesMode);
             });
+            document.getElementById('btn-auto-notes').addEventListener('click', autoFillNotes);
             document.getElementById('btn-hint').addEventListener('click', giveHint);
             document.getElementById('btn-new-game').addEventListener('click', () => newGame());
             document.getElementById('pause-btn').addEventListener('click', togglePause);
@@ -1097,6 +1148,11 @@
                 if (e.key === 'n' || e.key === 'N') {
                     state.notesMode = !state.notesMode;
                     document.getElementById('btn-notes').classList.toggle('active', state.notesMode);
+                    return;
+                }
+
+                if (e.key === 'a' || e.key === 'A') {
+                    autoFillNotes();
                     return;
                 }
 
