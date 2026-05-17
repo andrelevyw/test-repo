@@ -509,9 +509,6 @@
 
         // ==================== CAGE GENERATION ====================
         function generateCages(solution, difficulty) {
-            const cageMap = Array.from({length: 9}, () => Array(9).fill(-1));
-            const cages = [];
-
             const sizeWeights = {
                 easy:   {2: 0.55, 3: 0.35, 4: 0.08, 5: 0.02},
                 medium: {2: 0.30, 3: 0.40, 4: 0.20, 5: 0.10},
@@ -520,6 +517,16 @@
             };
             const weights = sizeWeights[difficulty] || sizeWeights.medium;
 
+            for (let attempt = 0; attempt < 30; attempt++) {
+                const result = tryGenerateCages(solution, weights);
+                if (result) return result;
+            }
+            // Last resort: accept whatever we get
+            return tryGenerateCages(solution, weights, true);
+        }
+
+        function tryGenerateCages(solution, weights, acceptSingletons = false) {
+            const owner = Array.from({length: 9}, () => Array(9).fill(-1));
             const allCells = [];
             for (let r = 0; r < 9; r++)
                 for (let c = 0; c < 9; c++)
@@ -528,10 +535,9 @@
 
             let id = 0;
             for (const [r, c] of allCells) {
-                if (cageMap[r][c] !== -1) continue;
-
+                if (owner[r][c] !== -1) continue;
                 const cells = [[r, c]];
-                cageMap[r][c] = id;
+                owner[r][c] = id;
                 const usedDigits = new Set([solution[r][c]]);
                 const targetSize = weightedChoice(weights);
 
@@ -543,7 +549,7 @@
                         for (const [dr, dc] of DIRS) {
                             const nr = cr + dr, nc = cc + dc;
                             if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9
-                                && cageMap[nr][nc] === -1
+                                && owner[nr][nc] === -1
                                 && !usedDigits.has(solution[nr][nc])) {
                                 candidates.push([nr, nc]);
                             }
@@ -552,24 +558,86 @@
                     if (!candidates.length) break;
                     const [nr, nc] = candidates[Math.floor(Math.random() * candidates.length)];
                     cells.push([nr, nc]);
-                    cageMap[nr][nc] = id;
+                    owner[nr][nc] = id;
                     usedDigits.add(solution[nr][nc]);
                 }
+                id++;
+            }
 
-                const sum = cells.reduce((s, [cr, cc]) => s + solution[cr][cc], 0);
+            if (!acceptSingletons && !mergeSingletons(owner, solution)) return null;
+            return buildCages(owner, solution);
+        }
 
-                // Find top-left cell (min row, then min col)
+        function mergeSingletons(owner, solution) {
+            for (let safety = 0; safety < 200; safety++) {
+                const counts = {};
+                for (let r = 0; r < 9; r++)
+                    for (let c = 0; c < 9; c++)
+                        counts[owner[r][c]] = (counts[owner[r][c]] || 0) + 1;
+
+                let sr = -1, sc = -1;
+                outer: for (let r = 0; r < 9; r++) {
+                    for (let c = 0; c < 9; c++) {
+                        if (counts[owner[r][c]] === 1) { sr = r; sc = c; break outer; }
+                    }
+                }
+                if (sr === -1) return true;
+
+                const singleId = owner[sr][sc];
+                const digit = solution[sr][sc];
+                const dirs = shuffle([...DIRS]);
+                let merged = false;
+                const tried = new Set([singleId]);
+                for (const [dr, dc] of dirs) {
+                    const nr = sr + dr, nc = sc + dc;
+                    if (nr < 0 || nr >= 9 || nc < 0 || nc >= 9) continue;
+                    const otherId = owner[nr][nc];
+                    if (tried.has(otherId)) continue;
+                    tried.add(otherId);
+
+                    let conflict = false;
+                    for (let rr = 0; rr < 9 && !conflict; rr++)
+                        for (let cc = 0; cc < 9 && !conflict; cc++)
+                            if (owner[rr][cc] === otherId && solution[rr][cc] === digit) conflict = true;
+                    if (!conflict) {
+                        owner[sr][sc] = otherId;
+                        merged = true;
+                        break;
+                    }
+                }
+                if (!merged) return false;
+            }
+            return false;
+        }
+
+        function buildCages(owner, solution) {
+            const groups = {};
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const k = owner[r][c];
+                    if (!groups[k]) groups[k] = [];
+                    groups[k].push([r, c]);
+                }
+            }
+            const cages = [];
+            const oldToNew = {};
+            for (const k of Object.keys(groups)) {
+                const cells = groups[k];
+                const sum = cells.reduce((s, [r, c]) => s + solution[r][c], 0);
                 let topLeft = cells[0];
                 for (const cell of cells) {
                     if (cell[0] < topLeft[0] || (cell[0] === topLeft[0] && cell[1] < topLeft[1])) {
                         topLeft = cell;
                     }
                 }
-
-                cages.push({ id, cells, sum, topLeft });
-                id++;
+                const newId = cages.length;
+                oldToNew[k] = newId;
+                cages.push({ id: newId, cells, sum, topLeft });
             }
-
+            const cageMap = Array.from({length: 9}, () => Array(9).fill(-1));
+            for (let r = 0; r < 9; r++)
+                for (let c = 0; c < 9; c++)
+                    cageMap[r][c] = oldToNew[owner[r][c]];
             return { cages, cageMap };
         }
 
