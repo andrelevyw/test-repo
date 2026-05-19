@@ -535,7 +535,6 @@
                 const result = tryGenerateCages(solution, weights);
                 if (result) return result;
             }
-            // Last resort: accept whatever we get
             return tryGenerateCages(solution, weights, true);
         }
 
@@ -790,11 +789,15 @@
 
                 state.history.push({ type: 'value', r, c, prevValue, prevNotes });
 
+                // Validate against the current board state, not against a single
+                // stored solution — this puzzle may have multiple valid completions
+                // and the player can legitimately pick any one of them.
+                state.playerGrid[r][c] = 0;
+                const validPlacement = isValidCandidate(r, c, num);
                 state.playerGrid[r][c] = num;
                 state.notes[r][c] = new Set();
 
-                // Check if correct
-                if (num !== state.solution[r][c]) {
+                if (!validPlacement) {
                     state.mistakes++;
                     updateInfoBar();
                     if (state.mistakes >= state.maxMistakes) {
@@ -809,7 +812,6 @@
                 } else {
                     state.score += getScoreForDifficulty();
                     updateInfoBar();
-                    // Remove this number from notes in same row/col/box/cage
                     removeNotesForPlacement(r, c, num);
                 }
 
@@ -872,17 +874,30 @@
         function giveHint() {
             if (!state.selectedCell || state.completed || state.paused) return;
             const [r, c] = state.selectedCell;
-            if (state.playerGrid[r][c] === state.solution[r][c]) return;
+
+            // Prefer the stored solution's digit, but fall back to any valid
+            // candidate if the player's current path already conflicts with it.
+            const prevValue = state.playerGrid[r][c];
+            state.playerGrid[r][c] = 0;
+            let hintDigit = state.solution[r][c];
+            if (!isValidCandidate(r, c, hintDigit)) {
+                hintDigit = 0;
+                for (let n = 1; n <= 9; n++) {
+                    if (isValidCandidate(r, c, n)) { hintDigit = n; break; }
+                }
+            }
+            state.playerGrid[r][c] = prevValue;
+            if (!hintDigit || hintDigit === prevValue) return;
 
             state.history.push({
                 type: 'value', r, c,
-                prevValue: state.playerGrid[r][c],
+                prevValue,
                 prevNotes: new Set(state.notes[r][c])
             });
 
-            state.playerGrid[r][c] = state.solution[r][c];
+            state.playerGrid[r][c] = hintDigit;
             state.notes[r][c] = new Set();
-            removeNotesForPlacement(r, c, state.solution[r][c]);
+            removeNotesForPlacement(r, c, hintDigit);
 
             if (checkWin()) {
                 state.completed = true;
@@ -1005,7 +1020,22 @@
         function checkWin() {
             for (let r = 0; r < 9; r++)
                 for (let c = 0; c < 9; c++)
-                    if (state.playerGrid[r][c] !== state.solution[r][c]) return false;
+                    if (state.playerGrid[r][c] === 0) return false;
+            for (let i = 0; i < 9; i++) {
+                const rowS = new Set(), colS = new Set(), boxS = new Set();
+                const br = Math.floor(i / 3) * 3, bc = (i % 3) * 3;
+                for (let j = 0; j < 9; j++) {
+                    rowS.add(state.playerGrid[i][j]);
+                    colS.add(state.playerGrid[j][i]);
+                    boxS.add(state.playerGrid[br + Math.floor(j / 3)][bc + j % 3]);
+                }
+                if (rowS.size !== 9 || colS.size !== 9 || boxS.size !== 9) return false;
+            }
+            for (const cage of state.cages) {
+                const vals = cage.cells.map(([r, c]) => state.playerGrid[r][c]);
+                if (new Set(vals).size !== vals.length) return false;
+                if (vals.reduce((a, b) => a + b, 0) !== cage.sum) return false;
+            }
             return true;
         }
 
@@ -1017,7 +1047,21 @@
         function hasError(r, c) {
             const val = state.playerGrid[r][c];
             if (val === 0) return false;
-            return val !== state.solution[r][c];
+            for (let i = 0; i < 9; i++) {
+                if (i !== c && state.playerGrid[r][i] === val) return true;
+                if (i !== r && state.playerGrid[i][c] === val) return true;
+            }
+            const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+            for (let dr = 0; dr < 3; dr++)
+                for (let dc = 0; dc < 3; dc++) {
+                    const rr = br + dr, cc = bc + dc;
+                    if ((rr !== r || cc !== c) && state.playerGrid[rr][cc] === val) return true;
+                }
+            const cage = state.cages[state.cageMap[r][c]];
+            for (const [cr, cc] of cage.cells) {
+                if ((cr !== r || cc !== c) && state.playerGrid[cr][cc] === val) return true;
+            }
+            return false;
         }
 
         function isCageFilled(cageId) {
@@ -1190,12 +1234,10 @@
                 btn.className = 'num-btn';
                 btn.textContent = n;
 
-                // Count how many of this number are placed correctly
                 let count = 0;
                 for (let r = 0; r < 9; r++)
                     for (let c = 0; c < 9; c++)
-                        if (state.playerGrid[r][c] === n && state.solution[r][c] === n)
-                            count++;
+                        if (state.playerGrid[r][c] === n) count++;
                 if (count >= 9) btn.classList.add('completed');
 
                 btn.addEventListener('click', (e) => {
