@@ -133,7 +133,7 @@
         }
 
         table#grid td .cell-value {
-            font-size: calc(var(--cell-size) * 0.5);
+            font-size: calc(var(--cell-size) * 0.56);
             font-weight: 600;
             line-height: 1;
             pointer-events: none;
@@ -169,7 +169,7 @@
         }
 
         table#grid td .notes-grid .note {
-            font-size: calc(var(--cell-size) * 0.22);
+            font-size: calc(var(--cell-size) * 0.24);
             font-weight: 500;
             color: #718096;
             display: flex;
@@ -416,9 +416,6 @@
                 </button>
                 <button class="action-btn" id="btn-erase">
                     <span class="icon">⌫</span> Erase
-                </button>
-                <button class="action-btn" id="btn-notes">
-                    <span class="icon">✏</span> Notes
                 </button>
                 <button class="action-btn" id="btn-auto-notes" title="Auto-fill candidates">
                     <span class="icon">⚡</span> Auto
@@ -696,7 +693,6 @@
             cageMap: null,
             cageColors: null,
             selectedCell: null,
-            notesMode: false,
             history: [],
             timer: { seconds: 0, running: false, interval: null, started: false },
             difficulty: 'medium',
@@ -718,7 +714,6 @@
             state.playerGrid = Array.from({length: 9}, () => Array(9).fill(0));
             state.notes = Array.from({length: 9}, () => Array.from({length: 9}, () => new Set()));
             state.selectedCell = null;
-            state.notesMode = false;
             state.history = [];
             state.mistakes = 0;
             state.score = 0;
@@ -734,7 +729,6 @@
             renderNumberPad();
             updateTimerDisplay();
             updateInfoBar();
-            document.getElementById('btn-notes').classList.remove('active');
             document.getElementById('win-modal').classList.remove('show');
             document.getElementById('gameover-modal').classList.remove('show');
         }
@@ -764,69 +758,70 @@
             renderGrid();
         }
 
+        function syncCell(r, c) {
+            const notes = state.notes[r][c];
+            state.playerGrid[r][c] = (notes.size === 1) ? [...notes][0] : 0;
+        }
+
+        // Status of a cell as a committed answer: 'none' (0 or 2+ candidates),
+        // 'valid' (single candidate, no conflict), 'invalid' (single candidate
+        // that breaks a rule). Used to score / flag mistakes only on transitions.
+        function singleStatus(r, c) {
+            if (state.notes[r][c].size !== 1) return 'none';
+            const val = [...state.notes[r][c]][0];
+            const saved = state.playerGrid[r][c];
+            state.playerGrid[r][c] = 0;
+            const valid = isValidCandidate(r, c, val);
+            state.playerGrid[r][c] = saved;
+            return valid ? 'valid' : 'invalid';
+        }
+
         function enterNumber(num) {
             if (!state.selectedCell || state.completed || state.paused) return;
             const [r, c] = state.selectedCell;
             startTimer();
 
-            if (state.notesMode) {
-                // Toggle note
-                const prev = new Set(state.notes[r][c]);
-                if (state.notes[r][c].has(num)) {
-                    state.notes[r][c].delete(num);
-                } else {
-                    state.notes[r][c].add(num);
-                }
-                state.history.push({ type: 'note', r, c, prev, value: state.playerGrid[r][c] });
+            const before = singleStatus(r, c);
+            state.history.push({ type: 'cell', r, c, prevNotes: new Set(state.notes[r][c]) });
 
-                // Clear value if present
-                if (state.playerGrid[r][c] !== 0) {
-                    state.playerGrid[r][c] = 0;
-                }
+            // Every keypad press toggles a candidate. A cell with exactly one
+            // candidate is treated as the committed answer (rendered big); two
+            // or more stay as small pencil marks. There is no separate notes mode.
+            if (state.notes[r][c].has(num)) {
+                state.notes[r][c].delete(num);
             } else {
-                const prevValue = state.playerGrid[r][c];
-                const prevNotes = new Set(state.notes[r][c]);
+                state.notes[r][c].add(num);
+            }
+            syncCell(r, c);
+            const after = singleStatus(r, c);
 
-                state.history.push({ type: 'value', r, c, prevValue, prevNotes });
-
-                // Validate against the current board state, not against a single
-                // stored solution — this puzzle may have multiple valid completions
-                // and the player can legitimately pick any one of them.
-                state.playerGrid[r][c] = 0;
-                const validPlacement = isValidCandidate(r, c, num);
-                state.playerGrid[r][c] = num;
-                state.notes[r][c] = new Set();
-
-                if (!validPlacement) {
-                    state.mistakes++;
-                    updateInfoBar();
-                    if (state.mistakes >= state.maxMistakes) {
-                        state.completed = true;
-                        state.timer.running = false;
-                        renderGrid();
-                        setTimeout(() => {
-                            document.getElementById('gameover-modal').classList.add('show');
-                        }, 400);
-                        return;
-                    }
-                } else {
-                    state.score += getScoreForDifficulty();
-                    updateInfoBar();
-                    removeNotesForPlacement(r, c, num);
-                }
-
-                // Check win
-                if (checkWin()) {
+            if (after === 'invalid' && before !== 'invalid') {
+                state.mistakes++;
+                updateInfoBar();
+                if (state.mistakes >= state.maxMistakes) {
                     state.completed = true;
                     state.timer.running = false;
-                    const mins = Math.floor(state.timer.seconds / 60);
-                    const secs = state.timer.seconds % 60;
-                    document.getElementById('win-message').textContent =
-                        `Time: ${mins}:${secs.toString().padStart(2,'0')} | Score: ${state.score}`;
+                    renderGrid();
                     setTimeout(() => {
-                        document.getElementById('win-modal').classList.add('show');
+                        document.getElementById('gameover-modal').classList.add('show');
                     }, 400);
+                    return;
                 }
+            } else if (after === 'valid' && before !== 'valid') {
+                state.score += getScoreForDifficulty();
+                updateInfoBar();
+            }
+
+            if (checkWin()) {
+                state.completed = true;
+                state.timer.running = false;
+                const mins = Math.floor(state.timer.seconds / 60);
+                const secs = state.timer.seconds % 60;
+                document.getElementById('win-message').textContent =
+                    `Time: ${mins}:${secs.toString().padStart(2,'0')} | Score: ${state.score}`;
+                setTimeout(() => {
+                    document.getElementById('win-modal').classList.add('show');
+                }, 400);
             }
 
             renderGrid();
@@ -836,17 +831,11 @@
         function eraseCell() {
             if (!state.selectedCell || state.completed || state.paused) return;
             const [r, c] = state.selectedCell;
-            if (state.playerGrid[r][c] === 0 && state.notes[r][c].size === 0) return;
+            if (state.notes[r][c].size === 0) return;
 
-            state.history.push({
-                type: 'erase',
-                r, c,
-                prevValue: state.playerGrid[r][c],
-                prevNotes: new Set(state.notes[r][c])
-            });
-
-            state.playerGrid[r][c] = 0;
+            state.history.push({ type: 'cell', r, c, prevNotes: new Set(state.notes[r][c]) });
             state.notes[r][c] = new Set();
+            syncCell(r, c);
             renderGrid();
             renderNumberPad();
         }
@@ -855,15 +844,13 @@
             if (!state.history.length || state.completed || state.paused) return;
             const action = state.history.pop();
 
-            if (action.type === 'value' || action.type === 'erase') {
-                state.playerGrid[action.r][action.c] = action.prevValue;
+            if (action.type === 'cell') {
                 state.notes[action.r][action.c] = action.prevNotes;
-            } else if (action.type === 'note') {
-                state.notes[action.r][action.c] = action.prev;
-                state.playerGrid[action.r][action.c] = action.value;
+                syncCell(action.r, action.c);
             } else if (action.type === 'autoNotes') {
                 for (const { r, c, prev } of action.changes) {
                     state.notes[r][c] = prev;
+                    syncCell(r, c);
                 }
             }
 
@@ -889,15 +876,10 @@
             state.playerGrid[r][c] = prevValue;
             if (!hintDigit || hintDigit === prevValue) return;
 
-            state.history.push({
-                type: 'value', r, c,
-                prevValue,
-                prevNotes: new Set(state.notes[r][c])
-            });
+            state.history.push({ type: 'cell', r, c, prevNotes: new Set(state.notes[r][c]) });
 
-            state.playerGrid[r][c] = hintDigit;
-            state.notes[r][c] = new Set();
-            removeNotesForPlacement(r, c, hintDigit);
+            state.notes[r][c] = new Set([hintDigit]);
+            syncCell(r, c);
 
             if (checkWin()) {
                 state.completed = true;
@@ -973,48 +955,35 @@
         function autoFillNotes() {
             if (state.completed || state.paused) return;
             startTimer();
-            const changes = [];
+            // Compute candidates for every uncommitted cell from a snapshot of the
+            // current committed state, then apply — so the result doesn't depend on
+            // iteration order (a cell that collapses to a single answer mid-pass
+            // would otherwise change candidates for later cells).
+            const computed = [];
             for (let r = 0; r < 9; r++) {
                 for (let c = 0; c < 9; c++) {
                     if (state.playerGrid[r][c] !== 0) continue;
-                    const prev = new Set(state.notes[r][c]);
                     const next = new Set();
                     for (let n = 1; n <= 9; n++) {
                         if (isValidCandidate(r, c, n)) next.add(n);
                     }
-                    if (prev.size !== next.size || [...prev].some(x => !next.has(x))) {
-                        changes.push({ r, c, prev });
-                        state.notes[r][c] = next;
-                    }
+                    computed.push({ r, c, next });
+                }
+            }
+            const changes = [];
+            for (const { r, c, next } of computed) {
+                const prev = state.notes[r][c];
+                if (prev.size !== next.size || [...prev].some(x => !next.has(x))) {
+                    changes.push({ r, c, prev: new Set(prev) });
+                    state.notes[r][c] = next;
+                    syncCell(r, c);
                 }
             }
             if (changes.length) {
                 state.history.push({ type: 'autoNotes', changes });
             }
             renderGrid();
-        }
-
-        function removeNotesForPlacement(r, c, num) {
-            // Same row and column
-            for (let i = 0; i < 9; i++) {
-                state.notes[r][i].delete(num);
-                state.notes[i][c].delete(num);
-            }
-            // Same box
-            const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
-            for (let dr = 0; dr < 3; dr++)
-                for (let dc = 0; dc < 3; dc++)
-                    state.notes[br + dr][bc + dc].delete(num);
-            // Same cage
-            const cageId = state.cageMap[r][c];
-            for (const cage of state.cages) {
-                if (cage.id === cageId) {
-                    for (const [cr, cc] of cage.cells) {
-                        state.notes[cr][cc].delete(num);
-                    }
-                    break;
-                }
-            }
+            renderNumberPad();
         }
 
         function checkWin() {
@@ -1280,10 +1249,6 @@
             // Action buttons
             document.getElementById('btn-undo').addEventListener('click', undo);
             document.getElementById('btn-erase').addEventListener('click', eraseCell);
-            document.getElementById('btn-notes').addEventListener('click', () => {
-                state.notesMode = !state.notesMode;
-                document.getElementById('btn-notes').classList.toggle('active', state.notesMode);
-            });
             document.getElementById('btn-auto-notes').addEventListener('click', autoFillNotes);
             document.getElementById('btn-hint').addEventListener('click', giveHint);
             document.getElementById('btn-new-game').addEventListener('click', () => newGame());
@@ -1305,12 +1270,6 @@
 
                 if (e.key === 'Backspace' || e.key === 'Delete') {
                     eraseCell();
-                    return;
-                }
-
-                if (e.key === 'n' || e.key === 'N') {
-                    state.notesMode = !state.notesMode;
-                    document.getElementById('btn-notes').classList.toggle('active', state.notesMode);
                     return;
                 }
 
