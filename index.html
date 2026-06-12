@@ -271,12 +271,12 @@
             left: 0;
             pointer-events: none;
             z-index: 1;
+            /* Same inset in every cell so note alignment is uniform,
+               whether or not the cell carries a cage sum label */
+            padding-top: calc(var(--cell) * 0.22);
         }
 
         table#grid td.has-value .notes-grid { display: none; }
-
-        /* Keep notes clear of the cage sum label */
-        table#grid td.has-sum .notes-grid { padding-top: calc(var(--cell) * 0.22); }
 
         table#grid td .notes-grid .note {
             font-size: max(7px, calc(var(--cell) * 0.24));
@@ -1743,7 +1743,6 @@
                         sumSpan.className = 'cage-sum';
                         sumSpan.textContent = cage.sum;
                         td.appendChild(sumSpan);
-                        td.classList.add('has-sum');
                     }
 
                     const notesDiv = document.createElement('div');
