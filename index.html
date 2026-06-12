@@ -30,10 +30,10 @@
             --btn-bg: #edf2f7;
             --btn-hover: #e2e8f0;
             --seg-bg: #e2e8f0;
-            --sel: #bee3f8;
-            --hl: rgba(190, 227, 248, 0.35);
-            --same: rgba(144, 205, 244, 0.5);
-            --err-bg: rgba(254, 202, 202, 0.65);
+            --sel: rgba(49, 130, 206, 0.22);
+            --hl: rgba(49, 130, 206, 0.10);
+            --same: rgba(49, 130, 206, 0.32);
+            --err-bg: rgba(229, 62, 62, 0.30);
             --note: #718096;
             --shadow: rgba(0, 0, 0, 0.1);
             --overlay: rgba(240, 244, 248, 0.92);
@@ -62,10 +62,10 @@
             --btn-bg: #2a3340;
             --btn-hover: #36414f;
             --seg-bg: #2a3340;
-            --sel: #2c5d8f;
-            --hl: rgba(66, 153, 225, 0.16);
-            --same: rgba(66, 153, 225, 0.38);
-            --err-bg: rgba(229, 62, 62, 0.32);
+            --sel: rgba(66, 153, 225, 0.30);
+            --hl: rgba(66, 153, 225, 0.13);
+            --same: rgba(66, 153, 225, 0.42);
+            --err-bg: rgba(229, 62, 62, 0.35);
             --note: #9fb0c0;
             --shadow: rgba(0, 0, 0, 0.5);
             --overlay: rgba(20, 24, 31, 0.92);
@@ -270,6 +270,7 @@
             top: 0;
             left: 0;
             pointer-events: none;
+            z-index: 1;
         }
 
         table#grid td.has-value .notes-grid { display: none; }
@@ -287,11 +288,22 @@
             line-height: 1;
         }
 
-        /* Cell states */
-        td.selected { background-color: var(--sel) !important; }
-        td.highlighted { background-color: var(--hl) !important; }
-        td.same-number { background-color: var(--same) !important; }
-        td.cage-error { background-color: var(--err-bg) !important; }
+        /* Cell states — translucent overlays so cage colors stay visible */
+        table#grid td::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        td.highlighted::after { background: var(--hl); }
+        td.same-number::after { background: var(--same); }
+        td.cage-error::after { background: var(--err-bg); }
+        td.selected::after {
+            background: var(--sel);
+            box-shadow: inset 0 0 0 2px var(--accent);
+        }
 
         @keyframes cellPop {
             0% { transform: scale(0.4); }
@@ -735,7 +747,7 @@
         // ==================== CAGE GENERATION ====================
         function generateCages(solution, difficulty) {
             const cageMap = Array.from({length: 9}, () => Array(9).fill(-1));
-            const cages = [];
+            let cages = [];
 
             const sizeWeights = {
                 easy:   {2: 0.55, 3: 0.35, 4: 0.08, 5: 0.02},
@@ -781,11 +793,34 @@
                     usedDigits.add(solution[nr][nc]);
                 }
 
-                cages.push(finalizeCage({ id, cells }, solution));
+                cages.push({ id, cells });
                 id++;
             }
 
-            return { cages, cageMap };
+            // Merge any 1-cell cage into an adjacent cage that doesn't contain
+            // its digit. Returns null (regenerate) when one can't be merged.
+            for (const cage of cages) {
+                if (cage.cells.length !== 1) continue;
+                const [r, c] = cage.cells[0];
+                const digit = solution[r][c];
+                let best = null;
+                for (const [dr, dc] of DIRS) {
+                    const nr = r + dr, nc = c + dc;
+                    if (nr < 0 || nr > 8 || nc < 0 || nc > 8) continue;
+                    const nb = cages[cageMap[nr][nc]];
+                    if (nb === cage || nb.cells.length >= 9) continue;
+                    if (nb.cells.some(([ar, ac]) => solution[ar][ac] === digit)) continue;
+                    if (!best || nb.cells.length < best.cells.length) best = nb;
+                }
+                if (!best) return null;
+                best.cells.push([r, c]);
+                cageMap[r][c] = best.id;
+                cage.cells = [];
+            }
+
+            const state = { cages, cageMap };
+            reindexCages(state, solution);
+            return state;
         }
 
         function finalizeCage(cage, solution) {
@@ -796,6 +831,34 @@
             }
             cage.topLeft = tl;
             return cage;
+        }
+
+        // Drops emptied cages and reassigns dense ids (used after repairs)
+        function reindexCages(state, solution) {
+            state.cages = state.cages.filter(cg => cg.cells.length > 0);
+            state.cages.forEach((cg, i) => {
+                cg.id = i;
+                for (const [r, c] of cg.cells) state.cageMap[r][c] = i;
+                finalizeCage(cg, solution);
+            });
+        }
+
+        function isContiguous(cells) {
+            if (!cells.length) return false;
+            const set = new Set(cells.map(([r, c]) => r * 9 + c));
+            const seen = new Set([cells[0][0] * 9 + cells[0][1]]);
+            const queue = [cells[0]];
+            while (queue.length) {
+                const [r, c] = queue.pop();
+                for (const [dr, dc] of DIRS) {
+                    const k = (r + dr) * 9 + (c + dc);
+                    if (set.has(k) && !seen.has(k)) {
+                        seen.add(k);
+                        queue.push([r + dr, c + dc]);
+                    }
+                }
+            }
+            return seen.size === cells.length;
         }
 
         // ==================== UNIQUENESS SOLVER ====================
@@ -811,6 +874,7 @@
             const cageRemSum = new Int16Array(nCages);
             const cageRemCells = new Int8Array(nCages);
             for (const cage of cages) {
+                if (!cage.cells.length) continue; // emptied during repair
                 cageRemSum[cage.id] = cage.sum;
                 cageRemCells[cage.id] = cage.cells.length;
             }
@@ -942,13 +1006,13 @@
                 return acc;
             }
 
+            // Only accept splits where both parts keep >= 2 cells
             const edges = shuffle([...parent.keys()]);
             let chosen = null;
             for (const key of edges) {
                 const part = subtree(key, []);
                 const a = part.length, b = cage.cells.length - a;
                 if (a >= 2 && b >= 2) { chosen = part; break; }
-                if (!chosen && a >= 1 && b >= 1) chosen = part;
             }
             if (!chosen) return false;
 
@@ -964,48 +1028,129 @@
             return true;
         }
 
+        // ==================== CELL TRANSFER (uniqueness repair) ====================
+        // Moves an ambiguous cell of a small (2-3) cage into an adjacent cage;
+        // the receiving cage's sum then pins that cell's digit. A leftover
+        // singleton is merged into a different neighbor so the ambiguous pair
+        // isn't reunited. Emptied cages stay as holes until reindexCages runs.
+        function transferRepair(gen, cageId, ambKeys, solution) {
+            const { cages, cageMap } = gen;
+            const cage = cages[cageId];
+            if (!cage.cells.length) return false;
+            const cand = shuffle(cage.cells.filter(cell => ambKeys.has(cell[0] * 9 + cell[1])));
+
+            for (const cell of cand) {
+                const [r, c] = cell;
+                const digit = solution[r][c];
+                const rest = cage.cells.filter(x => x !== cell);
+                if (rest.length >= 2 && !isContiguous(rest)) continue;
+
+                const targets = [];
+                for (const [dr, dc] of DIRS) {
+                    const nr = r + dr, nc = c + dc;
+                    if (nr < 0 || nr > 8 || nc < 0 || nc > 8) continue;
+                    const nb = cages[cageMap[nr][nc]];
+                    if (nb === cage || targets.includes(nb)) continue;
+                    if (nb.cells.length >= 9) continue;
+                    if (nb.cells.some(([ar, ac]) => solution[ar][ac] === digit)) continue;
+                    targets.push(nb);
+                }
+                if (!targets.length) continue;
+                const nb = targets[Math.floor(rng() * targets.length)];
+
+                if (rest.length === 1) {
+                    const [lr, lc] = rest[0];
+                    const ldig = solution[lr][lc];
+                    let merge = null;
+                    for (const [dr, dc] of DIRS) {
+                        const nr = lr + dr, nc = lc + dc;
+                        if (nr < 0 || nr > 8 || nc < 0 || nc > 8) continue;
+                        const cnb = cages[cageMap[nr][nc]];
+                        if (cnb === cage || cnb === nb) continue;
+                        if (cnb.cells.length >= 9) continue;
+                        if (cnb.cells.some(([ar, ac]) => solution[ar][ac] === ldig)) continue;
+                        if (!merge || cnb.cells.length < merge.cells.length) merge = cnb;
+                    }
+                    if (!merge) continue;
+                    nb.cells.push(cell); cageMap[r][c] = nb.id;
+                    merge.cells.push(rest[0]); cageMap[lr][lc] = merge.id;
+                    cage.cells = [];
+                    finalizeCage(merge, solution);
+                } else {
+                    nb.cells.push(cell); cageMap[r][c] = nb.id;
+                    cage.cells = rest;
+                    finalizeCage(cage, solution);
+                }
+                finalizeCage(nb, solution);
+                return true;
+            }
+            return false;
+        }
+
         // ==================== PUZZLE GENERATION ====================
         // Guarantees a unique solution: when the cage layout admits more than
         // one solution, a cage containing an ambiguous cell is split in two
         // (which adds a constraint) until the puzzle becomes unique.
         function generatePuzzle(difficulty) {
-            for (let attempt = 0; attempt < 5; attempt++) {
+            let lastGen = null, lastSolution = null;
+            for (let attempt = 0; attempt < 8; attempt++) {
                 const solution = generateSolvedGrid();
-                const { cages, cageMap } = generateCages(solution, difficulty);
+                const gen = generateCages(solution, difficulty);
+                if (!gen) continue; // unmergeable singleton, regenerate
+                lastGen = gen; lastSolution = solution;
 
-                for (let round = 0; round < 30; round++) {
-                    const res = countSolutions(cages, cageMap, 2, 80000);
-                    if (!res.aborted && res.count === 1) {
-                        return { solution, cages, cageMap };
-                    }
+                let ok = false;
+                for (let round = 0; round < 40; round++) {
+                    const res = countSolutions(gen.cages, gen.cageMap, 2, 80000);
+                    if (!res.aborted && res.count === 1) { ok = true; break; }
 
-                    let targetId = -1;
+                    // Candidate cages to repair, largest first: those containing
+                    // a cell where two found solutions differ, else (aborted) all
+                    let ids = [];
+                    const ambKeys = new Set();
                     if (res.solutions.length >= 2) {
                         const [s1, s2] = res.solutions;
-                        let bestSize = -1;
+                        const set = new Set();
                         for (let idx = 0; idx < 81; idx++) {
                             if (s1[idx] !== s2[idx]) {
-                                const id = cageMap[(idx / 9) | 0][idx % 9];
-                                const size = cages[id].cells.length;
-                                if (size > bestSize) { bestSize = size; targetId = id; }
+                                set.add(gen.cageMap[(idx / 9) | 0][idx % 9]);
+                                ambKeys.add(idx);
                             }
                         }
+                        ids = [...set];
                     } else {
-                        let bestSize = -1;
-                        for (const cg of cages) {
-                            if (cg.cells.length > bestSize) {
-                                bestSize = cg.cells.length;
-                                targetId = cg.id;
-                            }
+                        ids = gen.cages.map(cg => cg.id);
+                        for (let idx = 0; idx < 81; idx++) ambKeys.add(idx);
+                    }
+                    ids.sort((a, b) => gen.cages[b].cells.length - gen.cages[a].cells.length);
+
+                    // Repair every ambiguous cage this round: large cages get
+                    // split (adds a sum constraint); small ones get a cell
+                    // transferred to a neighbor (pins the cell's digit)
+                    let repaired = false;
+                    for (const tid of ids) {
+                        if (gen.cages[tid].cells.length >= 4
+                            ? splitCage(gen.cages, gen.cageMap, tid, solution)
+                            : transferRepair(gen, tid, ambKeys, solution)) {
+                            repaired = true;
                         }
                     }
-                    if (targetId === -1 || !splitCage(cages, cageMap, targetId, solution)) break;
+                    if (!repaired) break;
+                }
+                if (ok) {
+                    reindexCages(gen, solution);
+                    return { solution, cages: gen.cages, cageMap: gen.cageMap };
                 }
             }
-            // Practically unreachable fallback: small cages are near-always unique
-            const solution = generateSolvedGrid();
-            const { cages, cageMap } = generateCages(solution, 'easy');
-            return { solution, cages, cageMap };
+            // Practically unreachable fallback: last layout, playable even if
+            // not verified unique (correctness is checked against the stored
+            // solution either way)
+            while (!lastGen) {
+                lastSolution = generateSolvedGrid();
+                lastGen = generateCages(lastSolution, 'easy');
+            }
+            reindexCages(lastGen, lastSolution);
+            return { solution: lastSolution, cages: lastGen.cages, cageMap: lastGen.cageMap };
         }
 
         // ==================== CAGE COLORING (graph coloring) ====================
@@ -1452,14 +1597,33 @@
         function autoNotes() {
             if (state.completed || state.paused) return;
             startTimer();
+            // Used digits per row/column/box from what's visible on the board
+            const rows = new Array(9).fill(0);
+            const cols = new Array(9).fill(0);
+            const boxes = new Array(9).fill(0);
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const v = effectiveValue(r, c);
+                    if (v === 0) continue;
+                    const bit = 1 << (v - 1);
+                    rows[r] |= bit;
+                    cols[c] |= bit;
+                    boxes[Math.floor(r / 3) * 3 + Math.floor(c / 3)] |= bit;
+                }
+            }
+            const cageMasks = state.cages.map(cg => cageCandidateMask(cg.id));
+
             const diffs = [];
             for (let r = 0; r < 9; r++) {
                 for (let c = 0; c < 9; c++) {
                     // Skip committed cells and single digits (pending answers)
                     if (state.playerGrid[r][c] !== 0 || state.notes[r][c].size === 1) continue;
+                    const allowed = cageMasks[state.cageMap[r][c]]
+                        & ~rows[r] & ~cols[c]
+                        & ~boxes[Math.floor(r / 3) * 3 + Math.floor(c / 3)];
                     const cand = new Set();
                     for (let d = 1; d <= 9; d++) {
-                        if (isCandidate(r, c, d)) cand.add(d);
+                        if (allowed & (1 << (d - 1))) cand.add(d);
                     }
                     diffs.push(cellDiff(r, c, 0, cand));
                 }
@@ -1467,31 +1631,22 @@
             if (pushAction(diffs)) afterBoardChange();
         }
 
-        function isCandidate(r, c, d) {
-            for (let i = 0; i < 9; i++) {
-                if (state.playerGrid[r][i] === d || state.playerGrid[i][c] === d) return false;
-            }
-            const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
-            for (let dr = 0; dr < 3; dr++)
-                for (let dc = 0; dc < 3; dc++)
-                    if (state.playerGrid[br + dr][bc + dc] === d) return false;
-            const cage = state.cages[state.cageMap[r][c]];
-            let placedSum = 0, emptyCells = 0;
+        // Digits that can appear in a cage's empty cells, from the exact list
+        // of combinations completing the remaining sum (e.g. a 17-in-2 cage
+        // only ever allows 8 and 9)
+        function cageCandidateMask(cageId) {
+            const cage = state.cages[cageId];
+            let placedSum = 0, usedMask = 0, empty = 0;
             for (const [cr, cc] of cage.cells) {
-                const v = state.playerGrid[cr][cc];
-                if (v === d) return false;
-                if (v === 0) emptyCells++;
-                else placedSum += v;
+                const v = effectiveValue(cr, cc);
+                if (v === 0) empty++;
+                else { placedSum += v; usedMask |= 1 << (v - 1); }
             }
-            // Digit must fit in what's left of the cage sum
-            const remSum = cage.sum - placedSum;
-            if (emptyCells === 1) return d === remSum;
-            if (d > remSum - minSumOf(emptyCells - 1)) return false;
-            return true;
-        }
-
-        function minSumOf(k) {
-            return k * (k + 1) / 2; // 1+2+...+k
+            const combos = cageCombinations(cage.sum - placedSum, empty, usedMask, 200);
+            let mask = 0;
+            for (const combo of combos)
+                for (const d of combo) mask |= 1 << (d - 1);
+            return mask;
         }
 
         // Finishes the game once every cell shows the correct value,
@@ -1540,11 +1695,11 @@
 
         // Combinations of `count` distinct digits (excluding used ones) summing
         // to `target` — shown as a solving aid for the selected cage.
-        function cageCombinations(target, count, usedMask) {
+        function cageCombinations(target, count, usedMask, limit = 24) {
             const results = [];
             const combo = [];
             function rec(start, rem, left) {
-                if (results.length >= 24) return;
+                if (results.length >= limit) return;
                 if (left === 0) {
                     if (rem === 0) results.push([...combo]);
                     return;
