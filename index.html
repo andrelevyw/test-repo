@@ -271,12 +271,12 @@
             left: 0;
             pointer-events: none;
             z-index: 1;
+            /* Same inset in every cell so note alignment is uniform,
+               whether or not the cell carries a cage sum label */
+            padding-top: calc(var(--cell) * 0.22);
         }
 
         table#grid td.has-value .notes-grid { display: none; }
-
-        /* Keep notes clear of the cage sum label */
-        table#grid td.has-sum .notes-grid { padding-top: calc(var(--cell) * 0.22); }
 
         table#grid td .notes-grid .note {
             font-size: max(7px, calc(var(--cell) * 0.24));
@@ -1204,6 +1204,7 @@
                 cageMap: null,
                 cageColors: null,
                 selectedCell: null,
+                pendingCell: null,
                 undoStack: [],
                 redoStack: [],
                 seconds: 0,
@@ -1432,6 +1433,7 @@
 
         function undo() {
             if (!state.undoStack.length || state.completed || state.paused) return;
+            state.pendingCell = null; // restored digits come back as notes
             const action = state.undoStack.pop();
             applyDiffs(action, false);
             state.redoStack.push(action);
@@ -1440,6 +1442,7 @@
 
         function redo() {
             if (!state.redoStack.length || state.completed || state.paused) return;
+            state.pendingCell = null; // restored digits come back as notes
             const action = state.redoStack.pop();
             applyDiffs(action, true);
             state.undoStack.push(action);
@@ -1457,24 +1460,36 @@
         }
 
         // ==================== PLAYER MOVES ====================
-        // A cell holds a set of digits: one digit displays as the answer,
-        // two or more display as pencil notes. The single digit is only
-        // validated (committed) when the player leaves the cell, so notes
-        // can be built up without costing mistakes.
+        // A cell holds a set of digits: two or more display as pencil notes.
+        // A single digit displays as the answer only when the player typed it
+        // (pending) — a lone note (e.g. from auto-fill or undo) stays a small
+        // note until tapped to confirm. The pending digit is validated
+        // (committed) when the player leaves the cell, so notes can be built
+        // up without costing mistakes. Notes are never changed automatically.
+        function isPending(r, c) {
+            return state.pendingCell
+                && state.pendingCell[0] === r && state.pendingCell[1] === c
+                && state.playerGrid[r][c] === 0
+                && state.notes[r][c].size === 1;
+        }
+
         function effectiveValue(r, c) {
             if (state.playerGrid[r][c] !== 0) return state.playerGrid[r][c];
-            if (state.notes[r][c].size === 1) return state.notes[r][c].values().next().value;
+            if (isPending(r, c)) return state.notes[r][c].values().next().value;
             return 0;
         }
 
         function commitCell(r, c) {
             if (state.completed) return;
-            if (state.playerGrid[r][c] !== 0 || state.notes[r][c].size !== 1) return;
+            if (!isPending(r, c)) {
+                if (state.pendingCell && state.pendingCell[0] === r
+                    && state.pendingCell[1] === c) state.pendingCell = null;
+                return;
+            }
+            state.pendingCell = null;
             const num = state.notes[r][c].values().next().value;
             const correct = num === state.solution[r][c];
-            const diffs = [cellDiff(r, c, num, new Set())];
-            if (correct) diffs.push(...peerNoteRemovalDiffs(r, c, num));
-            pushAction(diffs);
+            pushAction([cellDiff(r, c, num, new Set())]);
 
             if (correct) {
                 state.score += basePoints();
@@ -1511,30 +1526,6 @@
             renderCageInfo();
         }
 
-        function peerNoteRemovalDiffs(r, c, num) {
-            const diffs = [];
-            const seen = new Set([r * 9 + c]);
-            const peers = [];
-            for (let i = 0; i < 9; i++) { peers.push([r, i]); peers.push([i, c]); }
-            const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
-            for (let dr = 0; dr < 3; dr++)
-                for (let dc = 0; dc < 3; dc++)
-                    peers.push([br + dr, bc + dc]);
-            for (const cell of state.cages[state.cageMap[r][c]].cells) peers.push(cell);
-
-            for (const [pr, pc] of peers) {
-                const key = pr * 9 + pc;
-                if (seen.has(key)) continue;
-                seen.add(key);
-                if (state.notes[pr][pc].has(num)) {
-                    const newNotes = new Set(state.notes[pr][pc]);
-                    newNotes.delete(num);
-                    diffs.push(cellDiff(pr, pc, state.playerGrid[pr][pc], newNotes));
-                }
-            }
-            return diffs;
-        }
-
         function enterNumber(num) {
             if (!state.selectedCell || state.completed || state.paused) return;
             const [r, c] = state.selectedCell;
@@ -1544,6 +1535,17 @@
             if (state.playerGrid[r][c] !== 0
                 && state.playerGrid[r][c] === state.solution[r][c]) return;
 
+            // Tapping a lone pencil note confirms it as the answer
+            if (state.playerGrid[r][c] === 0 && !isPending(r, c)
+                && state.notes[r][c].size === 1 && state.notes[r][c].has(num)) {
+                state.pendingCell = [r, c];
+                updateCell(r, c);
+                popCell(r, c);
+                afterBoardChange();
+                maybeFinishBoard();
+                return;
+            }
+
             // Toggle the digit in the cell's content (a committed wrong
             // value is demoted back into the set)
             const content = new Set(state.notes[r][c]);
@@ -1552,6 +1554,15 @@
             else content.add(num);
 
             pushAction([cellDiff(r, c, 0, content)]);
+            // The typed digit standing alone is a pending answer; anything
+            // else (notes, removal) leaves the cell in note mode
+            if (content.size === 1 && content.has(num)) {
+                state.pendingCell = [r, c];
+            } else if (state.pendingCell && state.pendingCell[0] === r
+                && state.pendingCell[1] === c) {
+                state.pendingCell = null;
+            }
+            updateCell(r, c);
             afterBoardChange();
             maybeFinishBoard();
         }
@@ -1562,6 +1573,8 @@
             if (state.playerGrid[r][c] === 0 && state.notes[r][c].size === 0) return;
             if (state.playerGrid[r][c] !== 0
                 && state.playerGrid[r][c] === state.solution[r][c]) return;
+            if (state.pendingCell && state.pendingCell[0] === r
+                && state.pendingCell[1] === c) state.pendingCell = null;
             pushAction([cellDiff(r, c, 0, new Set())]);
             afterBoardChange();
         }
@@ -1588,7 +1601,7 @@
             startTimer();
             state.selectedCell = [r, c];
             const num = state.solution[r][c];
-            pushAction([cellDiff(r, c, num, new Set()), ...peerNoteRemovalDiffs(r, c, num)]);
+            pushAction([cellDiff(r, c, num, new Set())]);
             popCell(r, c);
             afterBoardChange();
             maybeFinishBoard();
@@ -1616,8 +1629,8 @@
             const diffs = [];
             for (let r = 0; r < 9; r++) {
                 for (let c = 0; c < 9; c++) {
-                    // Skip committed cells and single digits (pending answers)
-                    if (state.playerGrid[r][c] !== 0 || state.notes[r][c].size === 1) continue;
+                    // Skip committed cells and the typed pending answer
+                    if (state.playerGrid[r][c] !== 0 || isPending(r, c)) continue;
                     const allowed = cageMasks[state.cageMap[r][c]]
                         & ~rows[r] & ~cols[c]
                         & ~boxes[Math.floor(r / 3) * 3 + Math.floor(c / 3)];
@@ -1743,7 +1756,6 @@
                         sumSpan.className = 'cage-sum';
                         sumSpan.textContent = cage.sum;
                         td.appendChild(sumSpan);
-                        td.classList.add('has-sum');
                     }
 
                     const notesDiv = document.createElement('div');
