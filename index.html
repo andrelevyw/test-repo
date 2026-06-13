@@ -439,7 +439,7 @@
         }
 
         .num-btn {
-            aspect-ratio: 0.85;
+            aspect-ratio: 0.72;
             border: none;
             border-radius: 10px;
             background: var(--btn-bg);
@@ -450,11 +450,11 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 1px;
+            gap: 2px;
         }
 
         .num-btn .num {
-            font-size: 21px;
+            font-size: 24px;
             font-weight: 600;
             line-height: 1;
         }
@@ -569,17 +569,26 @@
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 500px) {
+            :root {
+                /* Edge-to-edge board: only the grid border stays inside */
+                --cell: min(calc((100vw - 6px) / 9), 52px);
+            }
+
+            body { padding: 6px 0; }
+
             table#grid td .cage-sum { left: 2px; }
 
             header h1 { font-size: 20px; }
             .diff-btn { padding: 5px 9px; font-size: 12px; }
             .daily-btn { padding: 8px 10px; font-size: 12px; }
             .num-btn { border-radius: 8px; }
-            .num-btn .num { font-size: 18px; }
+            .num-btn .num { font-size: 22px; }
             .num-btn .count { font-size: 9px; }
             .action-btn { padding: 6px 8px; min-width: 50px; font-size: 10px; }
             .action-btn .icon { font-size: 17px; }
-            .number-pad { gap: 4px; }
+            .number-pad { gap: 4px; padding: 0 2px; }
+            .controls { max-width: none; }
+            #cage-info { max-width: none; }
         }
 
     </style>
