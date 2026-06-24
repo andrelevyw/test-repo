@@ -1450,32 +1450,33 @@ function animateAndComplete(fromRow, fromCol, toRow, toCol, piece, captured, mov
         animatePieceMove(rookFloater, baseRow, rookFromCol, baseRow, rookToCol, {});
     }
 
-    // Smash captured piece when the attacking piece arrives (at 70% of capture animation)
-    if (captured) {
-        const targetSquare = boardEl.children[toRow * 8 + toCol];
-        const targetPieceEl = targetSquare?.querySelector('.piece');
-        if (targetPieceEl) {
-            setTimeout(() => {
-                targetPieceEl.classList.add('piece-smash');
-            }, duration * 0.6);
-        }
+    // The moment of impact: when the moving piece actually reaches its target.
+    // A knight slams down at the end of its arc; a lunging capture strikes at ~70%;
+    // a normal glide arrives at the end. Smash, debris and sound must all fire here.
+    const isKnight = piece.type === 'N';
+    const impactTime = isKnight ? duration * 0.92 : (isCapture ? duration * 0.7 : duration);
+
+    if (isCapture) {
+        // The victim is smashed at the captured square (its real position for en passant,
+        // where the captured pawn sits beside the destination rather than on it).
+        const victimRow = isEnPassant ? (piece.color === 'white' ? toRow + 1 : toRow - 1) : toRow;
+        const victimCol = toCol;
+        const victimPiece = captured || board[victimRow][victimCol];
+        const victimSquare = boardEl.children[victimRow * 8 + victimCol];
+        const victimPieceEl = victimSquare?.querySelector('.piece');
+        setTimeout(() => {
+            if (victimPieceEl) victimPieceEl.classList.add('piece-smash');
+            if (victimPiece) triggerCaptureEffect(victimRow, victimCol, piece, victimPiece);
+            playCaptureSound();
+        }, impactTime);
+    } else {
+        // Non-capture: the move "thud" plays as the piece lands.
+        setTimeout(() => playMoveSound(), impactTime);
     }
 
-    // For en passant, smash the captured pawn at its actual position
-    if (isEnPassant) {
-        const capturedRow = piece.color === 'white' ? toRow + 1 : toRow - 1;
-        const capturedSquare = boardEl.children[capturedRow * 8 + toCol];
-        const capturedPieceEl = capturedSquare?.querySelector('.piece');
-        if (capturedPieceEl) {
-            setTimeout(() => {
-                capturedPieceEl.classList.add('piece-smash');
-            }, duration * 0.6);
-        }
-    }
-
-    // After animation completes, finalize the move
-    // For captures, wait longer so the smash animation (500ms) can finish
-    const completionDelay = isCapture ? duration + 400 : duration + 60;
+    // Finalize the move once the strike has played out. For captures we wait for most of
+    // the smash (500ms) so rebuilding the board does not cut the destruction short.
+    const completionDelay = isCapture ? impactTime + 450 : duration + 60;
     setTimeout(() => {
         floater.remove();
         if (rookFloater) rookFloater.remove();
@@ -1563,18 +1564,9 @@ function completeMove(fromRow, fromCol, toRow, toCol, piece, captured, moveData,
     // Set last move
     lastMove = { fromRow, fromCol, toRow, toCol };
 
-    // Capture animation - fix en passant effect position
-    if (captured) {
-        if (isEnPassant) {
-            const epEffectRow = piece.color === 'white' ? toRow + 1 : toRow - 1;
-            triggerCaptureEffect(epEffectRow, toCol, piece, captured);
-        } else {
-            triggerCaptureEffect(toRow, toCol, piece, captured);
-        }
-        playCaptureSound();
-    } else {
-        playMoveSound();
-    }
+    // NOTE: the capture destruction effect and the move/capture sounds are fired at the
+    // moment of impact inside animateAndComplete(), so they stay in sync with the strike.
+    // completeMove() only mutates game state and the resulting position (check, etc.).
 
     // Update half move clock
     if (piece.type === 'P' || captured) halfMoveClock = 0;
