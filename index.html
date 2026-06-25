@@ -397,19 +397,30 @@
             max-width: 470px;
         }
 
-        .action-buttons {
+        /* Actions on the left, number pad on the right — so the keypad sits
+           under the thumb for one-handed play */
+        .play-area {
             display: flex;
-            justify-content: center;
+            gap: 8px;
+            align-items: stretch;
+            margin-bottom: 10px;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-auto-rows: 1fr;
             gap: 6px;
-            margin-bottom: 12px;
+            flex: 0 0 34%;
         }
 
         .action-btn {
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 3px;
-            padding: 8px 12px;
+            padding: 4px;
             border: none;
             border-radius: 10px;
             background: var(--btn-bg);
@@ -417,8 +428,7 @@
             font-size: 11px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
-            min-width: 58px;
+            transition: background 0.2s, transform 0.1s;
         }
 
         .action-btn:hover { background: var(--btn-hover); }
@@ -433,14 +443,14 @@
 
         /* 3x3 number pad — large, thumb-reachable, one-handed */
         .number-pad {
+            flex: 1;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
-            margin-bottom: 12px;
         }
 
         .num-btn {
-            aspect-ratio: 1.7;
+            aspect-ratio: 1.6;
             border: none;
             border-radius: 12px;
             background: var(--btn-bg);
@@ -575,9 +585,9 @@
         /* ===== RESPONSIVE ===== */
         @media (max-width: 500px) {
             :root {
-                /* Board fills the width but shrinks if height is tight, so the
-                   big 3x3 keypad and New Game button stay on screen */
-                --cell: min(calc((100vw - 6px) / 9), calc((100vh - 472px) / 9), 52px);
+                /* Board fills the full width (edge-to-edge); the compact
+                   actions-left / keypad-right layout keeps everything on screen */
+                --cell: min(calc((100vw - 6px) / 9), 52px);
             }
 
             body { padding: 6px 0; }
@@ -590,13 +600,10 @@
             .top-controls { margin-top: 8px; gap: 10px; }
             .diff-btn { padding: 5px 9px; font-size: 12px; }
             .daily-btn { padding: 8px 10px; font-size: 12px; }
-            #cage-info { margin-bottom: 6px; min-height: 26px; max-width: none; }
-            .action-buttons { margin-bottom: 8px; }
-            .num-btn { aspect-ratio: 2.3; }
+            #cage-info { margin-bottom: 6px; min-height: 24px; max-width: none; }
             .num-btn .num { font-size: 28px; }
-            .action-btn { padding: 6px 8px; min-width: 50px; font-size: 10px; }
-            .action-btn .icon { font-size: 17px; }
-            .number-pad { gap: 6px; margin-bottom: 8px; }
+            .action-btn { font-size: 10px; }
+            .action-btn .icon { font-size: 18px; }
             .controls { max-width: none; }
         }
 
@@ -644,24 +651,26 @@
         <div id="cage-info" aria-live="polite"></div>
 
         <div class="controls">
-            <div class="action-buttons">
-                <button class="action-btn" id="btn-undo" title="Undo (Ctrl+Z)">
-                    <span class="icon">↩</span> Undo
-                </button>
-                <button class="action-btn" id="btn-redo" title="Redo (Ctrl+Y)">
-                    <span class="icon">↪</span> Redo
-                </button>
-                <button class="action-btn" id="btn-erase" title="Erase (Backspace)">
-                    <span class="icon">⌫</span> Erase
-                </button>
-                <button class="action-btn" id="btn-autonotes" title="Fill all pencil notes automatically">
-                    <span class="icon">🪄</span> Auto
-                </button>
-                <button class="action-btn" id="btn-hint" title="Hint (H)">
-                    <span class="icon">💡</span> Hint
-                </button>
+            <div class="play-area">
+                <div class="action-buttons">
+                    <button class="action-btn" id="btn-undo" title="Undo (Ctrl+Z)">
+                        <span class="icon">↩</span> Undo
+                    </button>
+                    <button class="action-btn" id="btn-redo" title="Redo (Ctrl+Y)">
+                        <span class="icon">↪</span> Redo
+                    </button>
+                    <button class="action-btn" id="btn-erase" title="Erase (Backspace)">
+                        <span class="icon">⌫</span> Erase
+                    </button>
+                    <button class="action-btn" id="btn-autonotes" title="Fill all pencil notes automatically">
+                        <span class="icon">🪄</span> Auto
+                    </button>
+                    <button class="action-btn" id="btn-hint" title="Hint (H)">
+                        <span class="icon">💡</span> Hint
+                    </button>
+                </div>
+                <div class="number-pad" id="number-pad"></div>
             </div>
-            <div class="number-pad" id="number-pad"></div>
             <button class="new-game-btn" id="btn-new-game">New Game</button>
         </div>
     </div>
