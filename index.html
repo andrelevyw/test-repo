@@ -431,44 +431,49 @@
             line-height: 1;
         }
 
+        /* 3x3 number pad — large, thumb-reachable, one-handed */
         .number-pad {
             display: grid;
-            grid-template-columns: repeat(9, 1fr);
-            gap: 6px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
             margin-bottom: 12px;
         }
 
         .num-btn {
-            aspect-ratio: 0.72;
+            aspect-ratio: 1.7;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             background: var(--btn-bg);
             color: var(--text-strong);
             cursor: pointer;
-            transition: all 0.15s;
+            transition: background 0.15s, transform 0.1s;
+            position: relative;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
         }
 
         .num-btn .num {
-            font-size: 24px;
+            font-size: 30px;
             font-weight: 600;
             line-height: 1;
         }
 
         .num-btn .count {
-            font-size: 10px;
+            position: absolute;
+            bottom: 5px;
+            right: 8px;
+            font-size: 11px;
             font-weight: 500;
             color: var(--text-faint);
             line-height: 1;
         }
 
         .num-btn:hover { background: var(--btn-hover); }
-        .num-btn:active { transform: scale(0.93); }
-        .num-btn.completed { opacity: 0.25; pointer-events: none; }
+        .num-btn:active { transform: scale(0.95); }
+        /* Completed digits dim but stay tappable (still needed to clear notes) */
+        .num-btn.completed { opacity: 0.4; }
+        .num-btn.completed .num { color: var(--text-faint); }
 
         .new-game-btn {
             width: 100%;
@@ -570,25 +575,29 @@
         /* ===== RESPONSIVE ===== */
         @media (max-width: 500px) {
             :root {
-                /* Edge-to-edge board: only the grid border stays inside */
-                --cell: min(calc((100vw - 6px) / 9), 52px);
+                /* Board fills the width but shrinks if height is tight, so the
+                   big 3x3 keypad and New Game button stay on screen */
+                --cell: min(calc((100vw - 6px) / 9), calc((100vh - 472px) / 9), 52px);
             }
 
             body { padding: 6px 0; }
 
+            #grid-container { margin: 6px 0 4px; }
             table#grid td .cage-sum { left: 2px; }
 
+            header { padding: 8px 0 4px; }
             header h1 { font-size: 20px; }
+            .top-controls { margin-top: 8px; gap: 10px; }
             .diff-btn { padding: 5px 9px; font-size: 12px; }
             .daily-btn { padding: 8px 10px; font-size: 12px; }
-            .num-btn { border-radius: 8px; }
-            .num-btn .num { font-size: 22px; }
-            .num-btn .count { font-size: 9px; }
+            #cage-info { margin-bottom: 6px; min-height: 26px; max-width: none; }
+            .action-buttons { margin-bottom: 8px; }
+            .num-btn { aspect-ratio: 2.3; }
+            .num-btn .num { font-size: 28px; }
             .action-btn { padding: 6px 8px; min-width: 50px; font-size: 10px; }
             .action-btn .icon { font-size: 17px; }
-            .number-pad { gap: 4px; padding: 0 2px; }
+            .number-pad { gap: 6px; margin-bottom: 8px; }
             .controls { max-width: none; }
-            #cage-info { max-width: none; }
         }
 
     </style>
