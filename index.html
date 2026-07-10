@@ -279,7 +279,7 @@
         table#grid td.has-value .notes-grid { display: none; }
 
         table#grid td .notes-grid .note {
-            font-size: max(7px, calc(var(--cell) * 0.24));
+            font-size: max(8px, calc(var(--cell) * 0.3));
             font-weight: 500;
             color: var(--note);
             display: flex;
@@ -585,26 +585,53 @@
         /* ===== RESPONSIVE ===== */
         @media (max-width: 500px) {
             :root {
-                /* Board fills the full width (edge-to-edge); the compact
-                   actions-left / keypad-right layout keeps everything on screen */
-                --cell: min(calc((100vw - 6px) / 9), 52px);
+                /* Board is a square that fills the full screen width, shrinking
+                   only if the viewport is too short. Everything is sized off
+                   100dvh so it never needs scrolling (dvh excludes the URL bar).
+                   336px is reserved for header + info + cage bar + keypad; the
+                   -4px accounts for the 2px grid border on each side so the
+                   board spans exactly the full width. */
+                --board: min(100vw, calc(100dvh - 336px));
+                --cell: calc((var(--board) - 4px) / 9);
             }
 
-            body { padding: 6px 0; }
+            html { height: 100%; }
+            body {
+                padding: 0;
+                margin: 0;
+                height: 100dvh;
+                min-height: 0;
+                overflow: hidden;
+            }
 
-            #grid-container { margin: 6px 0 4px; }
+            #app {
+                height: 100dvh;
+                max-width: none;
+                justify-content: center;
+            }
+
+            header { padding: 6px 0 2px; }
+            header h1 { font-size: 19px; }
+            .top-controls { margin-top: 6px; gap: 8px; }
+            .diff-btn { padding: 5px 9px; font-size: 12px; }
+            .daily-btn { padding: 7px 9px; font-size: 12px; }
+            .info-bar { margin: 4px 0 2px; gap: 14px; }
+
+            /* Board spans the full width; cells stay square via --cell */
+            #grid-container { margin: 4px 0; }
+            table#grid { border-width: 2px; }
             table#grid td .cage-sum { left: 2px; }
 
-            header { padding: 8px 0 4px; }
-            header h1 { font-size: 20px; }
-            .top-controls { margin-top: 8px; gap: 10px; }
-            .diff-btn { padding: 5px 9px; font-size: 12px; }
-            .daily-btn { padding: 8px 10px; font-size: 12px; }
-            #cage-info { margin-bottom: 6px; min-height: 24px; max-width: none; }
-            .num-btn .num { font-size: 28px; }
+            #cage-info { margin: 2px 0 6px; min-height: 22px; max-width: none; }
+
+            .controls { max-width: none; width: 100%; padding: 0 4px; }
+            .play-area { margin-bottom: 0; }
             .action-btn { font-size: 10px; }
             .action-btn .icon { font-size: 18px; }
-            .controls { max-width: none; }
+            /* Fixed keypad row height keeps the reserved space constant */
+            .number-pad { grid-auto-rows: 54px; gap: 7px; }
+            .num-btn { aspect-ratio: auto; height: 54px; }
+            .num-btn .num { font-size: 27px; }
         }
 
     </style>
@@ -621,6 +648,7 @@
                     <button class="diff-btn" data-diff="expert">Expert</button>
                 </div>
                 <button class="daily-btn" id="daily-btn" title="Daily puzzle — same for everyone, changes every day">📅 Daily</button>
+                <button class="daily-btn" id="btn-new-game" title="Start a new puzzle">↻ New</button>
                 <div class="timer-group">
                     <span id="timer">00:00</span>
                     <button class="icon-btn" id="pause-btn" title="Pause (P)">⏸</button>
@@ -671,7 +699,6 @@
                 </div>
                 <div class="number-pad" id="number-pad"></div>
             </div>
-            <button class="new-game-btn" id="btn-new-game">New Game</button>
         </div>
     </div>
 
@@ -1955,7 +1982,7 @@
             });
             document.getElementById('daily-btn').classList.toggle('active', state.daily);
             document.getElementById('btn-new-game').textContent =
-                state.daily ? 'Restart Daily Puzzle' : 'New Game';
+                state.daily ? '↻ Restart' : '↻ New';
         }
 
         function refreshAll() {
