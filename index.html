@@ -223,6 +223,8 @@
             vertical-align: middle;
             position: relative;
             cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         td.cage-c0 { background-color: var(--cage-0); }
@@ -457,6 +459,8 @@
             color: var(--text-strong);
             cursor: pointer;
             transition: background 0.15s, transform 0.1s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
             position: relative;
             display: flex;
             align-items: center;
@@ -1507,7 +1511,9 @@
             renderNumberPad();
             renderCageInfo();
             updateActionButtons();
-            saveGame(true);
+            // Throttled save: keeps localStorage/JSON work out of the tap
+            // hot path; visibilitychange/beforeunload still force-save.
+            saveGame(false);
         }
 
         // ==================== PLAYER MOVES ====================
@@ -1790,7 +1796,7 @@
                     valueSpan.className = 'cell-value';
                     td.appendChild(valueSpan);
 
-                    td.addEventListener('click', () => selectCell(r, c));
+                    fastTap(td, () => selectCell(r, c));
 
                     cellEls[r].push(td);
                     valueEls[r].push(valueSpan);
@@ -1799,6 +1805,24 @@
                 }
                 table.appendChild(tr);
             }
+        }
+
+        // Touch fires the handler on pointerdown (finger-down) instead of
+        // click (finger-up), cutting ~80-120ms of perceived tap latency.
+        // Mouse and keyboard still go through the normal click path.
+        function fastTap(el, handler) {
+            let firedByPointer = false;
+            el.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse') return;
+                e.preventDefault();
+                firedByPointer = true;
+                handler();
+            });
+            el.addEventListener('pointercancel', () => { firedByPointer = false; });
+            el.addEventListener('click', () => {
+                if (firedByPointer) { firedByPointer = false; return; }
+                handler();
+            });
         }
 
         function updateCell(r, c) {
@@ -1937,7 +1961,7 @@
                     const btn = document.createElement('button');
                     btn.className = 'num-btn';
                     btn.innerHTML = `<span class="num">${n}</span><span class="count"></span>`;
-                    btn.addEventListener('click', () => enterNumber(n));
+                    fastTap(btn, () => enterNumber(n));
                     pad.appendChild(btn);
                 }
             }
@@ -2025,9 +2049,9 @@
                 newGame(state.difficulty, !state.daily);
             });
 
-            document.getElementById('btn-undo').addEventListener('click', undo);
-            document.getElementById('btn-redo').addEventListener('click', redo);
-            document.getElementById('btn-erase').addEventListener('click', eraseCell);
+            fastTap(document.getElementById('btn-undo'), undo);
+            fastTap(document.getElementById('btn-redo'), redo);
+            fastTap(document.getElementById('btn-erase'), eraseCell);
             document.getElementById('btn-autonotes').addEventListener('click', autoNotes);
             document.getElementById('btn-hint').addEventListener('click', giveHint);
             document.getElementById('btn-new-game').addEventListener('click', () => newGame());
