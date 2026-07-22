@@ -75,6 +75,25 @@
             --cage-9: #46282e;
         }
 
+        /* Classic board: plain newspaper-style cells, cages shown by their
+           dashed outline alone. The dashed border darkens a step since it
+           becomes the only cage cue. */
+        [data-board="classic"] {
+            --cage-0: #ffffff; --cage-1: #ffffff; --cage-2: #ffffff;
+            --cage-3: #ffffff; --cage-4: #ffffff; --cage-5: #ffffff;
+            --cage-6: #ffffff; --cage-7: #ffffff; --cage-8: #ffffff;
+            --cage-9: #ffffff;
+            --border-dashed: #7b8794;
+        }
+
+        [data-theme="dark"][data-board="classic"] {
+            --cage-0: #1d232c; --cage-1: #1d232c; --cage-2: #1d232c;
+            --cage-3: #1d232c; --cage-4: #1d232c; --cage-5: #1d232c;
+            --cage-6: #1d232c; --cage-7: #1d232c; --cage-8: #1d232c;
+            --cage-9: #1d232c;
+            --border-dashed: #8494a5;
+        }
+
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: var(--bg);
@@ -223,6 +242,8 @@
             vertical-align: middle;
             position: relative;
             cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         td.cage-c0 { background-color: var(--cage-0); }
@@ -279,7 +300,7 @@
         table#grid td.has-value .notes-grid { display: none; }
 
         table#grid td .notes-grid .note {
-            font-size: max(8px, calc(var(--cell) * 0.27));
+            font-size: max(8px, calc(var(--cell) * 0.25));
             font-weight: 500;
             color: var(--note);
             display: flex;
@@ -457,6 +478,8 @@
             color: var(--text-strong);
             cursor: pointer;
             transition: background 0.15s, transform 0.1s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
             position: relative;
             display: flex;
             align-items: center;
@@ -653,6 +676,7 @@
                     <span id="timer">00:00</span>
                     <button class="icon-btn" id="pause-btn" title="Pause (P)">⏸</button>
                     <button class="icon-btn" id="theme-btn" title="Toggle dark mode">🌙</button>
+                    <button class="icon-btn" id="board-btn" title="Toggle board style (colored / classic)">🎨</button>
                 </div>
             </div>
         </header>
@@ -731,6 +755,7 @@
         const SAVE_KEY = 'ks2_save';
         const STATS_KEY = 'ks2_stats';
         const THEME_KEY = 'ks2_theme';
+        const BOARD_KEY = 'ks2_board';
 
         // ==================== RNG ====================
         // All generation randomness goes through `rng` so daily puzzles
@@ -1507,7 +1532,9 @@
             renderNumberPad();
             renderCageInfo();
             updateActionButtons();
-            saveGame(true);
+            // Throttled save: keeps localStorage/JSON work out of the tap
+            // hot path; visibilitychange/beforeunload still force-save.
+            saveGame(false);
         }
 
         // ==================== PLAYER MOVES ====================
@@ -1790,7 +1817,7 @@
                     valueSpan.className = 'cell-value';
                     td.appendChild(valueSpan);
 
-                    td.addEventListener('click', () => selectCell(r, c));
+                    fastTap(td, () => selectCell(r, c));
 
                     cellEls[r].push(td);
                     valueEls[r].push(valueSpan);
@@ -1799,6 +1826,24 @@
                 }
                 table.appendChild(tr);
             }
+        }
+
+        // Touch fires the handler on pointerdown (finger-down) instead of
+        // click (finger-up), cutting ~80-120ms of perceived tap latency.
+        // Mouse and keyboard still go through the normal click path.
+        function fastTap(el, handler) {
+            let firedByPointer = false;
+            el.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse') return;
+                e.preventDefault();
+                firedByPointer = true;
+                handler();
+            });
+            el.addEventListener('pointercancel', () => { firedByPointer = false; });
+            el.addEventListener('click', () => {
+                if (firedByPointer) { firedByPointer = false; return; }
+                handler();
+            });
         }
 
         function updateCell(r, c) {
@@ -1937,7 +1982,7 @@
                     const btn = document.createElement('button');
                     btn.className = 'num-btn';
                     btn.innerHTML = `<span class="num">${n}</span><span class="count"></span>`;
-                    btn.addEventListener('click', () => enterNumber(n));
+                    fastTap(btn, () => enterNumber(n));
                     pad.appendChild(btn);
                 }
             }
@@ -2015,6 +2060,17 @@
             applyTheme(cur === 'dark' ? 'light' : 'dark');
         }
 
+        function applyBoardStyle(style) {
+            document.documentElement.setAttribute('data-board', style);
+            document.getElementById('board-btn').textContent = style === 'classic' ? '📰' : '🎨';
+            try { localStorage.setItem(BOARD_KEY, style); } catch {}
+        }
+
+        function toggleBoardStyle() {
+            const cur = document.documentElement.getAttribute('data-board');
+            applyBoardStyle(cur === 'classic' ? 'colored' : 'classic');
+        }
+
         // ==================== EVENT LISTENERS ====================
         function setupEventListeners() {
             document.querySelectorAll('.diff-btn').forEach(btn => {
@@ -2025,15 +2081,16 @@
                 newGame(state.difficulty, !state.daily);
             });
 
-            document.getElementById('btn-undo').addEventListener('click', undo);
-            document.getElementById('btn-redo').addEventListener('click', redo);
-            document.getElementById('btn-erase').addEventListener('click', eraseCell);
+            fastTap(document.getElementById('btn-undo'), undo);
+            fastTap(document.getElementById('btn-redo'), redo);
+            fastTap(document.getElementById('btn-erase'), eraseCell);
             document.getElementById('btn-autonotes').addEventListener('click', autoNotes);
             document.getElementById('btn-hint').addEventListener('click', giveHint);
             document.getElementById('btn-new-game').addEventListener('click', () => newGame());
             document.getElementById('pause-btn').addEventListener('click', () => togglePause());
             document.getElementById('resume-btn').addEventListener('click', () => togglePause());
             document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+            document.getElementById('board-btn').addEventListener('click', toggleBoardStyle);
 
             document.getElementById('btn-play-again').addEventListener('click', () => newGame());
             document.getElementById('btn-try-again').addEventListener('click', () => newGame());
@@ -2104,6 +2161,9 @@
         let savedTheme = 'light';
         try { savedTheme = localStorage.getItem(THEME_KEY) || 'light'; } catch {}
         applyTheme(savedTheme === 'dark' ? 'dark' : 'light');
+        let savedBoard = 'colored';
+        try { savedBoard = localStorage.getItem(BOARD_KEY) || 'colored'; } catch {}
+        applyBoardStyle(savedBoard === 'classic' ? 'classic' : 'colored');
         setupEventListeners();
 
         if (tryRestore()) {
