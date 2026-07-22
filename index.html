@@ -75,6 +75,25 @@
             --cage-9: #46282e;
         }
 
+        /* Classic board: plain newspaper-style cells, cages shown by their
+           dashed outline alone. The dashed border darkens a step since it
+           becomes the only cage cue. */
+        [data-board="classic"] {
+            --cage-0: #ffffff; --cage-1: #ffffff; --cage-2: #ffffff;
+            --cage-3: #ffffff; --cage-4: #ffffff; --cage-5: #ffffff;
+            --cage-6: #ffffff; --cage-7: #ffffff; --cage-8: #ffffff;
+            --cage-9: #ffffff;
+            --border-dashed: #7b8794;
+        }
+
+        [data-theme="dark"][data-board="classic"] {
+            --cage-0: #1d232c; --cage-1: #1d232c; --cage-2: #1d232c;
+            --cage-3: #1d232c; --cage-4: #1d232c; --cage-5: #1d232c;
+            --cage-6: #1d232c; --cage-7: #1d232c; --cage-8: #1d232c;
+            --cage-9: #1d232c;
+            --border-dashed: #8494a5;
+        }
+
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: var(--bg);
@@ -657,6 +676,7 @@
                     <span id="timer">00:00</span>
                     <button class="icon-btn" id="pause-btn" title="Pause (P)">⏸</button>
                     <button class="icon-btn" id="theme-btn" title="Toggle dark mode">🌙</button>
+                    <button class="icon-btn" id="board-btn" title="Toggle board style (colored / classic)">🎨</button>
                 </div>
             </div>
         </header>
@@ -735,6 +755,7 @@
         const SAVE_KEY = 'ks2_save';
         const STATS_KEY = 'ks2_stats';
         const THEME_KEY = 'ks2_theme';
+        const BOARD_KEY = 'ks2_board';
 
         // ==================== RNG ====================
         // All generation randomness goes through `rng` so daily puzzles
@@ -2039,6 +2060,17 @@
             applyTheme(cur === 'dark' ? 'light' : 'dark');
         }
 
+        function applyBoardStyle(style) {
+            document.documentElement.setAttribute('data-board', style);
+            document.getElementById('board-btn').textContent = style === 'classic' ? '📰' : '🎨';
+            try { localStorage.setItem(BOARD_KEY, style); } catch {}
+        }
+
+        function toggleBoardStyle() {
+            const cur = document.documentElement.getAttribute('data-board');
+            applyBoardStyle(cur === 'classic' ? 'colored' : 'classic');
+        }
+
         // ==================== EVENT LISTENERS ====================
         function setupEventListeners() {
             document.querySelectorAll('.diff-btn').forEach(btn => {
@@ -2058,6 +2090,7 @@
             document.getElementById('pause-btn').addEventListener('click', () => togglePause());
             document.getElementById('resume-btn').addEventListener('click', () => togglePause());
             document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+            document.getElementById('board-btn').addEventListener('click', toggleBoardStyle);
 
             document.getElementById('btn-play-again').addEventListener('click', () => newGame());
             document.getElementById('btn-try-again').addEventListener('click', () => newGame());
@@ -2128,6 +2161,9 @@
         let savedTheme = 'light';
         try { savedTheme = localStorage.getItem(THEME_KEY) || 'light'; } catch {}
         applyTheme(savedTheme === 'dark' ? 'dark' : 'light');
+        let savedBoard = 'colored';
+        try { savedBoard = localStorage.getItem(BOARD_KEY) || 'colored'; } catch {}
+        applyBoardStyle(savedBoard === 'classic' ? 'classic' : 'colored');
         setupEventListeners();
 
         if (tryRestore()) {
